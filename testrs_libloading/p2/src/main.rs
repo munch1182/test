@@ -29,7 +29,7 @@ fn load<P: AsRef<OsStr>>(app_context: AppContext, p: P) -> Result<()> {
     let info = plugin.info();
     plugin.init();
 
-    let cost = time::SystemTime::now().duration_since(curr).unwrap();
+    let cost = time::SystemTime::now().duration_since(curr)?;
     println!("Plugin {:?} loaded, cost {:?}", info.id, cost);
     Ok(())
 }
