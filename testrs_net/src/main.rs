@@ -17,6 +17,7 @@ async fn main() {
         )
         .layer(cors);
 
+    //let addr = SocketAddr::from(([192, 168, 2, 130], 1234));
     let addr = SocketAddr::from(([127, 0, 0, 1], 1234));
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();

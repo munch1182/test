@@ -8,7 +8,7 @@ onMounted(async () => {
   const remote = await loadRemote(
     "http://127.0.0.1:1234/static/TestRemote.vue"
   );
-  remote.value = markRaw(remote);
+  remote.value = remote;
   console.log(remote.value);
 });
 </script>
