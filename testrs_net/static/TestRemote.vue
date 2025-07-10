@@ -5,6 +5,14 @@ const index = ref(0);
 </script>
 
 <template>
-  <div>{{ index }}</div>
+  <span>From remote .vue file</span>
+  <div>{{ index }}11</div>
   <input type="button" value="+" @click="index++" />
 </template>
+
+<style scoped>
+span {
+  color: black;
+  font-weight: bold;
+}
+</style>

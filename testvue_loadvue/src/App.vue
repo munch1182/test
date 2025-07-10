@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import { markRaw, onMounted, ref } from "vue";
-import { loadRemote } from "./lib/loadremote";
+import { loadModule } from "vue3-sfc-loader";
+import * as Vue from "vue";
+import { opts } from "./lib/loadremote";
 
-const remote = ref(null);
+const url = "http://127.0.0.1:1234/static/TestRemote.vue";
 
-onMounted(async () => {
-  const remote = await loadRemote(
-    "http://127.0.0.1:1234/static/TestRemote.vue"
-  );
-  remote.value = remote;
-  console.log(remote.value);
-});
+const remoteCompoment = Vue.defineAsyncComponent(async () =>
+  loadModule(url, {
+    moduleCache: { vue: Vue },
+    ...opts,
+  })
+);
 </script>
 
 <template>
   <a href="#">hello world</a>
-  <component v-if="remote" :is="remote"></component>
+  <component :is="remoteCompoment" v-if="remoteCompoment" />
 </template>
 
 <style scoped></style>
