@@ -5,7 +5,7 @@ import re
 
 import json
 
-url = 'https://www.bilibili.com/video/BV1jt421c7yN/'
+url = 'https://b23.tv/wqb0FAy'
 cookie = ""
 headers = {
         
