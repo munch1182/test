@@ -30,6 +30,10 @@ async fn main() {
             "/static",
             ServeDir::new("static").not_found_service(get(err)),
         )
+        .nest_service(
+            "/static/dist",
+            ServeDir::new("static/dist").not_found_service(get(err)),
+        )
         .layer(cors)
         .layer(middleware::from_fn(print_req_res));
 

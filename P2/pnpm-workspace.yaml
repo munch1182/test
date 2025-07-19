@@ -1,0 +1,3 @@
+packages:
+  - "p2"
+  - "packages/*"
