@@ -1,64 +1,125 @@
-import requests
 import json
+import os
 import re
+from urllib.parse import parse_qs, urlparse
+import requests
+from re import compile
 
-videoUrl = "https://www.kuaishou.com/short-video/3xv6gxfhup6c8mm?cc=share_copylink&followRefer=151&shareMethod=TOKEN&docId=9&kpn=KUAISHOU&subBiz=BROWSE_SLIDE_PHOTO&photoId=3xv6gxfhup6c8mm&shareId=18481413877959&shareToken=X-9VNuEG3zVor1lz&shareResourceType=PHOTO_OTHER&userId=3x52iwuwpxbr7qk&shareType=1&et=1_i%252F2008597717177534465_bs6502&shareMode=APP&efid=0&originShareId=18481413877959&appType=21&shareObjectId=5201376260098820311&shareUrlOpened=0&timestamp=1752739957588&utm_source=app_share&utm_medium=app_share&utm_campaign=app_share&location=app_share"
-# https://www.kuaishou.com/video/3xbszt6yravw739?authorId=3x45xripnn3tq5a&tabId=1&area=recommendxxfilm
-photoId = re.findall(r"https://www.kuaishou.com/video/(.*)\?.*", videoUrl)[0]
-try:
-    webPageArea = re.findall(r".*area=(.*)", videoUrl)[0]
-except Exception as e:
-    print(e)
-    webPageArea = ""
 
-url = "https://www.kuaishou.com/graphql"
-print(photoId, webPageArea)
-
-headers = {
-    "content-type": "application/json",
-    "Cookie": "kpf=PC_WEB; kpn=KUAISHOU_VISION; clientid=3; did=web_d5468278a1e92934b3751f249005ffd3; client_key=65890b29; userId=1002026148; kuaishou.server.web_st=ChZrdWFpc2hvdS5zZXJ2ZXIud2ViLnN0EqABb3k7H6FPn5rPTxi_U90A1EyivbCG1lWIL1_rV6NDVpXzhBc1jBu7ym59g3fUExHe5ZNBf8YKAXnF2IL0cRoE0cCKrTTndeqWCsDxF5FFXwEjJVAWhZTi87lyyhTvvOBDBgG7AZ03thuTfr_QXmvbueTi9Yd_RBKwIWhWZ9cY88tn8OqN_4iX9l7mHh7PvK7eCnL3BXSM0JABpysi1936rxoS1KQylfZfbCBEuMI0IcjfqenKIiBZWJZqfmVkyM3JqsKIBJh0A-rz8bGOJ_hOfif7PIQInSgFMAE; kuaishou.server.web_ph=4185d09841f87d0bcad53e5c0029de4c6304",
-    "Host": "www.kuaishou.com",
-    "Origin": "https://www.kuaishou.com",
-    "Referer": "https://www.kuaishou.com/search/video?searchKey=%E6%80%A7%E6%84%9F",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36",
-}
-data = json.dumps(
-    {
-        "operationName": "visionVideoDetail",
-        "variables": {
-            "photoId": "%s" % (photoId),
-            "page": "detail",
-            "webPageArea": "{}".format(webPageArea),
-        },
-        "query": "query visionVideoDetail($photoId: String, $type: String, $page: String, $webPageArea: String) {\n  "
-        "visionVideoDetail(photoId: $photoId, type: $type, page: $page, webPageArea: $webPageArea) {\n    "
-        "status\n    type\n    author {\n      id\n      name\n      following\n      headerUrl\n      "
-        "__typename\n    }\n    photo {\n      id\n      duration\n      caption\n      likeCount\n      "
-        "realLikeCount\n      coverUrl\n      photoUrl\n      liked\n      timestamp\n      expTag\n      "
-        "llsid\n      viewCount\n      videoRatio\n      stereoType\n      croppedPhotoUrl\n      manifest {"
-        "\n        mediaType\n        businessType\n        version\n        adaptationSet {\n          id\n "
-        "         duration\n          representation {\n            id\n            defaultSelect\n          "
-        "  backupUrl\n            codecs\n            url\n            height\n            width\n           "
-        " avgBitrate\n            maxBitrate\n            m3u8Slice\n            qualityType\n            "
-        "qualityLabel\n            frameRate\n            featureP2sp\n            hidden\n            "
-        "disableAdaptive\n            __typename\n          }\n          __typename\n        }\n        "
-        "__typename\n      }\n      __typename\n    }\n    tags {\n      type\n      name\n      "
-        "__typename\n    }\n    commentLimit {\n      canAddComment\n      __typename\n    }\n    llsid\n    "
-        "danmakuSwitch\n    __typename\n  }\n}\n",
+class KuaishouDownload:
+    SHORT_URL = compile(
+        r"(https?://\S*kuaishou\.(?:com|cn)/[^\s\"<>\\^`{|}，。；！？、【】《》]+)"
+    )
+    LIVE_URL = compile(r"https?://live\.kuaishou\.com/\S+/\S+/(\S+)")
+    PC_COMPLETE_URL = compile(r"(https?://\S*kuaishou\.(?:com|cn)/short-video/\S+)")
+    REDIRECT_URL = compile(r"(https?://\S*chenzhongtech\.(?:com|cn)/fw/photo/\S+)")
+    HEADERS = {
+        "Referer": "https://www.kuaishou.cn/new-reco",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
     }
-)  # 请求的data数据，json类型
+    SCRIPT = "//script/text()"
+    WEB_KEYWORD = "window.__APOLLO_STATE__="
+    APP_KEYWORD = "window.INIT_STATE = "
+    PHOTO_REGEX = compile(r"\"photo\":(\{\".*\"}),\"serialInfo\"")
 
-rsp = requests.post(url=url, headers=headers, data=data)
-infos = rsp.json()
-print("响应的状态码为：", rsp.status_code)
-print("响应：", infos)
-info = infos["data"]["visionVideoDetail"]["photo"]
-videoName = info["caption"]
-for str_i in ["?", "、", "╲", "/", "*", "“", "”", "<", ">", "|"]:
-    videoName = videoName.replace(str_i, "")  # 文件重命名
-print("视频的标题：", videoName)
-downloadUrl = info["photoUrl"]
-print("视频的下载链接为：", downloadUrl)
-rsp2 = requests.get(url=downloadUrl, headers=headers)
-with open(file="{}.mp4".format(videoName), mode="wb") as f:
-    f.write(rsp2.content)
+    def parsec(self, url):
+
+        res = requests.get(url, headers=self.HEADERS, allow_redirects=True)
+
+        url_redirect = res.url
+        c = res.cookies
+
+        cookie = c.items()
+        cookie_str = "; ".join([f"{key}={value}" for key, value in cookie])
+
+        print("url_redirect: ", url_redirect)
+        # 如果返回的参数没有对应数值，则是cookie中的did无效，需要去注册该did
+        print("cookie: ", cookie_str)
+
+        web, detail_id = self.detail_id(url_redirect)
+        if not detail_id:
+            print("fail parsec")
+            return
+
+        print("detail_id: ", detail_id)
+
+        title, url = self.parse_data(res.text, web, detail_id)
+
+        if not title or not url:
+            print("fail parse_data")
+            return
+
+        # print("---------------------")
+
+        # headers = self.HEADERS.copy()
+        # headers["Cookie"] = cookie_str
+        # res2 = requests.get(url, headers=headers, allow_redirects=True)
+
+        # self.parse_data(res2.text, web, detail_id)
+
+        video_content = requests.get(url=url, headers=self.HEADERS).content
+
+        file = "video"
+        if not os.path.exists(file):
+            os.mkdir(file)
+
+        with open("video\\" + title + ".mp4", mode="wb") as v:
+            v.write(video_content)
+
+    def parse_data(self, html, web, detail_id):
+        script = self.script(html, web)
+
+        print(script)
+
+        name = f"VisionVideoDetailPhoto:{detail_id}"
+
+        if not script.__contains__(name):
+            print("not find VisionVideoDetailPhoto")
+            return ("", "")
+
+        json_data = json.loads(script)
+
+        print(json_data)
+
+        detail = json_data["defaultClient"][name]
+
+        url = detail["photoUrl"]
+        title = detail["caption"]
+        print(url)
+        return (title, url)
+
+    def script(self, html, web):
+        find = ""
+        if web:
+            find1 = re.findall("window.__APOLLO_STATE__=(.*?)</script>", html)
+            if find1:
+                find = find1[0]
+        else:
+            find2 = re.findall("window.INIT_STATE = (.*?)</script>", html)
+            if find2:
+                find = find2[0]
+        return str(
+            find.replace(
+                ";(function(){var s;(s=document.currentScript||document.scripts["
+                "document.scripts.length-1]).parentNode.removeChild(s);}());",
+                "",
+            )
+        )
+
+    def detail_id(self, url):
+        url = urlparse(url)
+        params = parse_qs(url.query)
+        if "chenzhongtech" in url.hostname:
+            return (False, params.get("photoId", [""])[0])
+        elif "short-video" in url.path:
+            return (
+                True,
+                url.path.split("/")[-1],
+            )
+        else:
+            return (False, "")
+
+
+if __name__ == "__main__":
+    url = "https://v.kuaishou.com/K03QpTh3"
+    KuaishouDownload().parsec(url)
