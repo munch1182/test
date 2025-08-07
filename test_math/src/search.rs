@@ -1,110 +1,148 @@
-use std::iter;
+use std::cmp::max;
 
-use pinyin::{Pinyin, to_pinyin_vec};
+use pinyin::ToPinyin;
 
-fn _conver_to_pinyin<S: ToString>(data: &Vec<S>) -> Vec<String> {
-    return data
-        .iter()
-        .map(|s| {
-            let str = to_pinyin_vec(&s.to_string(), Pinyin::plain);
-            if str.len() > 0 {
-                str.concat()
-            } else {
-                s.to_string()
-            }
-        })
-        .collect::<Vec<_>>();
-}
+/**
+ * 返回模糊搜索得分
+ *
+ * 分数只在一次比较中有效，不能跨不同的查询参数来比较分数
+ */
+pub fn fuzzy_score<S: ToString>(query: &S, data: &S) -> u32 {
+    let query = query.to_string().to_lowercase();
+    // 处理空查询
+    if query.is_empty() {
+        return 0;
+    }
+    let data = data.to_string().to_lowercase();
 
-pub fn score_query(query: &str, target: &Vec<&str>) -> Vec<f32> {
-    return target.iter().map(|s| n_gram(query, s)).collect::<Vec<_>>();
-}
+    // 转换为字符向量以便索引访问
+    let q_chars: Vec<char> = query.chars().collect();
+    let d_chars: Vec<char> = data.chars().collect();
 
-pub fn sort_query<'a>(query: &str, target: &Vec<&'a str>) -> Vec<&'a str> {
-    let mut res = target.to_vec();
-    res.sort_by(|a, b| {
-        n_gram(query, b)
-            .partial_cmp(&n_gram(query, a))
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
-    res
-}
-
-#[allow(dead_code)]
-fn n_gram(a: &str, b: &str) -> f32 {
-    let str_len = a.chars().count() + 1;
-
-    let trigrams_a = _trigrams_impl(a);
-    let trigrams_b = _trigrams_impl(b);
-
-    let mut score = 0f32;
-
-    for t_a in &trigrams_a {
-        for t_b in &trigrams_b {
-            if t_a == t_b {
-                score += 1f32;
-                break;
-            }
+    // 存储第一个查询字符在目标中的所有位置
+    let mut start_indices = Vec::new();
+    for (i, &c) in d_chars.iter().enumerate() {
+        if c == q_chars[0] {
+            start_indices.push(i);
         }
     }
-    let res = score / str_len as f32;
-    if 0f32 <= res && res <= 1f32 {
-        res
-    } else {
-        0f32
+
+    let mut best_score = 0;
+
+    // 遍历所有可能的起始位置
+    for &start in &start_indices {
+        let mut score = 0;
+        // 第一个字符的得分
+        score += 1; // 基础分
+        if start == 0 {
+            score += 5; // 开头位置奖励
+        }
+
+        let mut last_match = start; // 上一个匹配位置
+        let mut q_index = 1; // 下一个要匹配的查询字符索引
+
+        // 遍历目标字符串剩余部分
+        for i in (start + 1)..d_chars.len() {
+            if q_index >= q_chars.len() {
+                break; // 已匹配所有查询字符
+            }
+
+            if d_chars[i] == q_chars[q_index] {
+                // 基础分
+                score += 1;
+
+                // 连续性奖励（当前字符紧跟前一个匹配字符）
+                if last_match == i - 1 {
+                    score += 3;
+                }
+
+                last_match = i;
+                q_index += 1;
+            }
+        }
+
+        best_score = max(best_score, score);
     }
+
+    best_score
 }
 
-fn _trigrams_impl(s: &str) -> Vec<(char, char, char)> {
-    let it_1 = iter::once(' ').chain(iter::once(' ')).chain(s.chars());
-    let it_2 = iter::once(' ').chain(s.chars());
-    let it_3 = s.chars().chain(iter::once(' '));
+/**
+ * 返回数据列表中的对应得分
+ */
+pub fn fuzzy_search_score<'a, S: ToString>(query: &S, data: &Vec<S>) -> Vec<u32> {
+    let query = query.to_py();
+    data.iter()
+        .map(|x| fuzzy_score(&query, &x.to_py()))
+        .collect::<Vec<u32>>()
+}
 
-    it_1.zip(it_2)
-        .zip(it_3)
-        .map(|((c1, c2), c3)| (c1, c2, c3))
-        .collect()
+/**
+ * 模糊搜索并返回排序后的字符
+ */
+pub fn fuzzy_search<'a, S: ToString>(query: &S, data: &Vec<S>) -> Vec<String> {
+    let mut new_map = fuzzy_search_score(query, data)
+        .iter()
+        .zip(data.iter())
+        .map(|(score, str)| (str, *score))
+        .collect::<Vec<(&S, u32)>>();
+    new_map.sort_by(|(_, a_score), (_, b_score)| b_score.cmp(&a_score));
+    new_map
+        .iter()
+        .map(|(str, _)| str.to_string())
+        .collect::<Vec<String>>()
+}
+
+// todo 用于实现类型比较
+pub trait FuzzyScore {
+    fn caluate(&self, query: &impl FuzzyScore) -> u32;
+}
+
+trait ToPinyinExt {
+    /**
+     * 转成拼音
+     */
+    fn to_py(&self) -> String;
+}
+
+impl<S: ToString> ToPinyinExt for S {
+    fn to_py(&self) -> String {
+        let str = self.to_string();
+        str.chars()
+            .map(|x| match x.to_pinyin() {
+                Some(p) => p.plain().to_string(),
+                None => x.to_string(),
+            })
+            .collect()
+    }
 }
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     #[test]
-    fn it_works() {
-        let list = _test();
-        let query = "exc";
-        let start = std::time::Instant::now();
-        let res = sort_query(query, &list);
-        println!("find {query}, res: {:?}, cost: {:?}", res, start.elapsed());
-        assert!(res[1] == "exx" && res[0] == "excaaxa");
-    }
-
-    fn _test() -> Vec<&'static str> {
-        vec![
-            "exx",
-            "aaa",
-            "maybe",
-            "e1x2",
-            "window progress",
-            "rust progress",
-            "explore progress",
-            "example.exe",
-            "excaaxa",
-        ]
+    fn test_basic_matching() {
+        let query = "yz";
+        let data = vec![
+            "就依他说的这么办吧",
+            "啊这",
+            "ez",
+            "医者1仁心",
+            "伊泽瑞尔",
+            "zyyz",
+        ];
+        let result = fuzzy_search_score(&query, &data);
+        println!("search: {query} => {:?}", result);
+        let result = fuzzy_search(&query, &data);
+        println!("search: {query} => {:?}", result);
+        assert!(result[2] == "zyyz")
     }
 
     #[test]
-    fn test_pinyin() {
-        let data = vec!["星期一", "行不行", "新加坡", "心情好", "nihaoma", "?78"];
-        let new_data = _conver_to_pinyin(&data);
-        let result = data
-            .iter()
-            .zip(new_data.iter())
-            .map(|(x, y)| format!("{x}: {y}"))
-            .collect::<Vec<String>>();
-        println!("result: {:?}", result);
-        assert!(new_data.iter().all(|x| x.len() > 0));
+    fn test_py() {
+        let str = "医者1仁心 ".to_py();
+        println!("{str}");
+        assert_eq!(str, "yizhe1renxin ".to_string())
     }
 }
