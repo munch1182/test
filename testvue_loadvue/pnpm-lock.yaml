@@ -44,6 +44,9 @@ importers:
       vue3-sfc-loader:
         specifier: ^0.9.5
         version: 0.9.5(vue@3.5.17(typescript@5.8.3))
+      wujie-vue3:
+        specifier: ^1.0.29
+        version: 1.0.29(vue@3.5.17(typescript@5.8.3))
     devDependencies:
       '@types/node':
         specifier: ^24.0.10
@@ -227,6 +230,10 @@ packages:
     engines: {node: '>=6.9.0'}
     peerDependencies:
       '@babel/core': ^7.0.0-0
+
+  '@babel/runtime@7.28.3':
+    resolution: {integrity: sha512-9uIQ10o0WGdpP6GDhXcdOJPJuDgFtIDtN/9+ArJQ2NAfAmiuhTQdzkaTGR33v43GYS2UrSA0eX2pPPHoFVvpxA==}
+    engines: {node: '>=6.9.0'}
 
   '@babel/template@7.27.2':
     resolution: {integrity: sha512-LPDZ85aEJyYSd18/DkjNh4/y1ntkE5KwUHWTiqgRxruuZL2F1yuHligVHLvcHY2vMHXttKFpJn6LwfI7cw7ODw==}
@@ -1403,6 +1410,14 @@ packages:
       typescript:
         optional: true
 
+  wujie-vue3@1.0.29:
+    resolution: {integrity: sha512-OGt5Veyq/DtmFzHQCANmv8nZgu877u7ZjS5qjFpSrtKARKhLjID3x99D40a4pb3Kj5UmRatkV5Gn5hqOWpziZQ==}
+    peerDependencies:
+      vue: ^3.0.0
+
+  wujie@1.0.29:
+    resolution: {integrity: sha512-u7PmBT4l5ov7ciwmZNG8DLIRKrYrnXDa0LnAFgRQikJ/ZrVZYzzSNz6duzEJoj8/o46dnMy/g9Hh/PBYGbgFUw==}
+
   yallist@2.1.2:
     resolution: {integrity: sha512-ncTzHV7NvsQZkYe1DW7cbDLm0YpzHmZF5r/iyP3ZnQtMiJ+pjzisCiMNI+Sj+xQF5pXhSHxSB3uDbsBTzY/c2A==}
 
@@ -1616,6 +1631,8 @@ snapshots:
       '@babel/plugin-syntax-typescript': 7.27.1(@babel/core@7.28.0)
     transitivePeerDependencies:
       - supports-color
+
+  '@babel/runtime@7.28.3': {}
 
   '@babel/template@7.27.2':
     dependencies:
@@ -2659,6 +2676,15 @@ snapshots:
       '@vue/shared': 3.5.17
     optionalDependencies:
       typescript: 5.8.3
+
+  wujie-vue3@1.0.29(vue@3.5.17(typescript@5.8.3)):
+    dependencies:
+      vue: 3.5.17(typescript@5.8.3)
+      wujie: 1.0.29
+
+  wujie@1.0.29:
+    dependencies:
+      '@babel/runtime': 7.28.3
 
   yallist@2.1.2: {}
 
