@@ -1,0 +1,5 @@
+{
+    "vscode-runner.projectRunner": {
+        "curr": "pnpm run -F appdev dev"
+    }
+}

@@ -1,2 +1,0 @@
-[workspace]
-members = ["p2", "plugin_adb","plugin_interface"]

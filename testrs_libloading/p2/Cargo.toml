@@ -1,9 +1,0 @@
-[package]
-name = "p2"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-libloading = "0.8.8"
-thiserror = "2.0.12"
-plugin_interface = { path = "../plugin_interface" }
