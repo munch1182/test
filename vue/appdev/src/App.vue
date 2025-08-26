@@ -1,11 +1,16 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { ref, Suspense } from "vue";
+import init, { add } from "./wasm/wasm_appdev";
+
+const result = ref(0);
+
+init().then(() => {
+  result.value = add(2, 3);
+});
+</script>
 
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <div class="container">{{ result }}</div>
 </template>
 
 <style scoped></style>

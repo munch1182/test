@@ -467,6 +467,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasm_appdev"
+version = "0.1.0"
+dependencies = [
+ "libcommon",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "windows-core"
 version = "0.61.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

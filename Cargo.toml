@@ -1,3 +1,3 @@
 [workspace]
 resolver = "3"
-members = ["rust/appdev", "rust/search"]
+members = ["rust/appdev", "rust/search", "rust/wasm_appdev"]
