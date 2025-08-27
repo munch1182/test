@@ -8,4 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 libcommon = { git = "https://github.com/munch1182/p2.git", branch = "master", package = "libcommon" }
+sysinfo = { version = "0.37", features = ["windows"] }
 wasm-bindgen = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+serde-wasm-bindgen = "0.6"

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, Suspense } from "vue";
-import init, { add } from "./wasm/wasm_appdev";
+import { ref } from "vue";
+import init, { pid } from "./wasm/wasm_appdev";
 
 const result = ref(0);
 
 init().then(() => {
-  result.value = add(2, 3);
+  result.value = pid();
 });
 </script>
 
