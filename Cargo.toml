@@ -1,3 +1,10 @@
 [workspace]
 resolver = "3"
-members = ["rust/appdev", "rust/loading", "rust/search", "rust/wasm_appdev"]
+members = [
+    "rust/appdev",
+    "rust/loading", "rust/plugin/plugin_aaa",
+    "rust/plugin/plugin_interface",
+    "rust/plugin/plugin_manager",
+    "rust/search",
+    "rust/wasm_appdev",
+]

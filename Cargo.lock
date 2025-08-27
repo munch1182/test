@@ -357,6 +357,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16f2611cd06a1ac239a0cea4521de9eb068a6ca110324ee00631aa68daa74fc0"
 
 [[package]]
+name = "plugin_aaa"
+version = "0.1.0"
+dependencies = [
+ "libcommon",
+ "plugin_interface",
+]
+
+[[package]]
+name = "plugin_interface"
+version = "0.1.0"
+
+[[package]]
+name = "plugin_manager"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "libcommon",
+ "libloading",
+ "plugin_interface",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.101"
 source = "registry+https://github.com/rust-lang/crates.io-index"
