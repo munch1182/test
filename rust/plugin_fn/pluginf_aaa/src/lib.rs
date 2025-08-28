@@ -3,7 +3,7 @@ use std::{
     sync::OnceLock,
 };
 
-use plugin_interface::{HostApi, PluginApi, PluginMeta};
+use pluginf_interface::{HostApi, PluginApi, PluginMeta};
 
 static PLUGIN_META: PluginMeta = PluginMeta {
     name: c"example_plugin".as_ptr() as *const c_char,

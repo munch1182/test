@@ -15,7 +15,7 @@ unsafe impl Sync for PluginMeta {}
 /// # example
 /// 需要实现的函数签名
 ///
-/// ```norun
+/// ```ignore
 /// #[unsafe(no_mangle)]
 /// pub unsafe extern "C" fn plugin_init(host_api: *const HostApi) -> *const PluginApi {
 /// }

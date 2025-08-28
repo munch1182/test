@@ -8,7 +8,7 @@ use std::{
 
 use libcommon::{newerr, prelude::*};
 use libloading::{Library, Symbol};
-use plugin_interface::{HostApi, PluginApi, PluginMeta};
+use pluginf_interface::{HostApi, PluginApi, PluginMeta};
 
 pub struct Plugin {
     _lib: Library,
@@ -138,10 +138,12 @@ impl PluginManager {
 
 #[cfg(test)]
 mod tests {
-    use std::process::Command;
-
     use super::*;
-    use libcommon::{curr_dir, ext::PrettyStringExt};
+    use libcommon::{
+        curr_dir,
+        ext::{PathJoinExt, PrettyStringExt},
+    };
+    use std::process::Command;
 
     #[test]
     #[logsetup]
@@ -155,7 +157,7 @@ mod tests {
 
         generatedll(&curr)?;
         let manager = PluginManager::new();
-        let path = curr.join("target").join("release").join("plugin_aaa.dll");
+        let path = curr.join_all(&["rust", "target", "release", "pluginf_aaa.dll"]);
         info!("load {:?}", path);
         manager.load_plugin(path)?;
 
@@ -165,11 +167,7 @@ mod tests {
     }
 
     fn generatedll(curr: &Path) -> Result<()> {
-        let curr = curr
-            .to_path_buf()
-            .join("rust")
-            .join("plugin_fn")
-            .join("plugin_aaa");
+        let curr = curr.join_all(&["rust", "plugin_fn", "pluginf_aaa"]);
         let curr = curr.to_str().unwrap();
         let mut cmd = Command::new("cargo");
         let op = cmd.current_dir(curr).args(["build", "-r"]).output()?;

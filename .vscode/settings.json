@@ -1,5 +1,5 @@
 {
-    "vscode-runner.projectRunner": {
-        "curr": "pnpm run -F appdev dev"
-    }
+  "vscode-runner.projectRunner": {
+    "curr": "cd vue && pnpm run -F appdev dev"
+  }
 }

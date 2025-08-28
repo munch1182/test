@@ -1,0 +1,12 @@
+[workspace]
+resolver = "3"
+members = [
+    "appdev",
+    "loading",
+    "plugin_fn/pluginf_aaa",
+    "plugin_fn/pluginf_interface",
+    "plugin_fn/pluginf_manager",
+    "plugin_router/pluginr_manager",
+    "search",
+    "wasm_appdev",
+]

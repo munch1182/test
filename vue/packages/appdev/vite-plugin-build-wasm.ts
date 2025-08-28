@@ -9,7 +9,9 @@ export default function buildWasm() {
       console.log("start wasm build");
       try {
         const currentDir = dirname(fileURLToPath(import.meta.url));
-        let rustdir = resolve(currentDir, "../../rust/wasm_appdev");
+        console.log("currdir", currentDir);
+        let rustdir = resolve(currentDir, "../../../rust/wasm_appdev");
+        console.log("rustdir", rustdir);
         let cmd = `cd ${rustdir} && wasm-pack build --target web --out-dir ${currentDir}/src/wasm`;
         execSync(cmd);
 

@@ -1,7 +1,6 @@
 [package]
-name = "plugin_interface"
+name = "pluginr_manager"
 version = "0.1.0"
 edition = "2024"
-
 
 [dependencies]

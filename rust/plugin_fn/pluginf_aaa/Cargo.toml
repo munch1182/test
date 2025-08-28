@@ -1,10 +1,11 @@
 [package]
-name = "plugin_manager"
+name = "pluginf_aaa"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
-libloading = "0.8"
 libcommon = { git = "https://github.com/munch1182/p2.git", branch = "master", package = "libcommon" }
-plugin_interface = { path = "../plugin_interface" }
-libc = "0.2"
+pluginf_interface = { path = "../pluginf_interface" }
