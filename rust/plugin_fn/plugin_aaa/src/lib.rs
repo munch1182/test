@@ -6,8 +6,8 @@ use std::{
 use plugin_interface::{HostApi, PluginApi, PluginMeta};
 
 static PLUGIN_META: PluginMeta = PluginMeta {
-    name: "example_plugin\0".as_ptr() as *const c_char,
-    version: "1.0.0\0".as_ptr() as *const c_char,
+    name: c"example_plugin".as_ptr() as *const c_char,
+    version: c"1.0.0".as_ptr() as *const c_char,
 };
 
 struct PluginState {
@@ -21,16 +21,16 @@ static PLUGIN_API: PluginApi = PluginApi {
     init: plugin_init,
     execute: plugin_execute,
     event_handler: Some(plugin_event_handler),
-    drop: drop,
+    clear,
 };
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn plugin_meta() -> *const PluginMeta {
+pub extern "C" fn plugin_meta() -> *const PluginMeta {
     &PLUGIN_META
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn plugin_init(host_api: *const c_void) -> i32 {
+pub extern "C" fn plugin_init(host_api: *const c_void) -> i32 {
     let host_api = unsafe { &*(host_api as *const HostApi) };
 
     unsafe {
@@ -44,6 +44,9 @@ pub unsafe extern "C" fn plugin_init(host_api: *const c_void) -> i32 {
     0
 }
 
+///
+/// # Safety
+///
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn plugin_execute(
     command: *const c_char,
@@ -57,7 +60,7 @@ pub unsafe extern "C" fn plugin_execute(
     log(format!("{fun_name} called with ({params_str})"));
     match cmd_str.as_ref() {
         "greet" => {
-            let resp = format!("Hello, {}!", params_str);
+            let resp = format!("Hello, {params_str}!");
             unsafe { *result = CString::new(resp).unwrap().into_raw() };
             0
         }
@@ -88,6 +91,9 @@ fn log(s: String) {
     unsafe { (state.host_api.log)(CString::new(s).unwrap().as_ptr()) };
 }
 
+///
+/// # Safety
+///
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn plugin_event_handler(event: *const c_char, data: *const c_char) -> i32 {
     let event_str = unsafe { CStr::from_ptr(event).to_string_lossy() };
@@ -95,7 +101,7 @@ pub unsafe extern "C" fn plugin_event_handler(event: *const c_char, data: *const
 
     match event_str.as_ref() {
         "app_ready" => {
-            log(format!("app ready: {}", data_str));
+            log(format!("app ready: {data_str}"));
             0
         }
         _ => 1,
@@ -103,11 +109,11 @@ pub unsafe extern "C" fn plugin_event_handler(event: *const c_char, data: *const
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn drop() -> i32 {
+pub extern "C" fn clear() -> i32 {
     0
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn init(_host_api: *const HostApi) -> *const PluginApi {
+pub extern "C" fn init(_host_api: *const HostApi) -> *const PluginApi {
     &PLUGIN_API as *const PluginApi
 }

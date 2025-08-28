@@ -2,9 +2,10 @@
 resolver = "3"
 members = [
     "rust/appdev",
-    "rust/loading", "rust/plugin/plugin_aaa",
-    "rust/plugin/plugin_interface",
-    "rust/plugin/plugin_manager",
+    "rust/loading",
+    "rust/plugin_fn/plugin_aaa",
+    "rust/plugin_fn/plugin_interface",
+    "rust/plugin_fn/plugin_manager",
     "rust/search",
     "rust/wasm_appdev",
 ]

@@ -25,7 +25,7 @@ pub struct PluginApi {
     pub meta: unsafe extern "C" fn() -> *const PluginMeta,
     pub init: unsafe extern "C" fn(host_api: *const c_void) -> i32,
     pub execute: unsafe extern "C" fn(command: CP, params: CP, result: *mut *mut c_char) -> i32,
-    pub drop: unsafe extern "C" fn() -> i32,
+    pub clear: unsafe extern "C" fn() -> i32,
 
     pub event_handler: Option<unsafe extern "C" fn(event: CP, data: CP) -> i32>,
 }

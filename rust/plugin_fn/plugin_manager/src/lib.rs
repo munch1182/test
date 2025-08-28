@@ -21,6 +21,12 @@ pub struct PluginManager {
     host_api: HostApi,
 }
 
+impl Default for PluginManager {
+    fn default() -> Self {
+        PluginManager::new()
+    }
+}
+
 impl PluginManager {
     pub fn new() -> Self {
         let host_api = HostApi {
@@ -107,7 +113,7 @@ impl PluginManager {
 
     unsafe extern "C" fn log(msg: *const c_char) {
         let msg = unsafe { CStr::from_ptr(msg) }.to_string_lossy();
-        info!("{}", msg);
+        info!("{msg}");
     }
 
     unsafe extern "C" fn invoke(
@@ -140,13 +146,13 @@ mod tests {
     #[test]
     #[logsetup]
     fn test() -> Result<()> {
-        let mut curr = curr_dir!()?;
-        for _ in 0..3 {
-            curr = curr
-                .parent()
-                .map(|x| x.to_path_buf())
-                .ok_or(newerr!("parent err"))?;
-        }
+        let curr = curr_dir!()?;
+        let curr = curr
+            .parent()
+            .and_then(Path::parent)
+            .and_then(Path::parent)
+            .ok_or(newerr!("parent err"))?;
+
         generatedll(&curr)?;
         let manager = PluginManager::new();
         let path = curr.join("target").join("release").join("plugin_aaa.dll");
@@ -157,11 +163,12 @@ mod tests {
         info!("result: {:?}", result);
         Ok(())
     }
+
     fn generatedll(curr: &Path) -> Result<()> {
         let curr = curr
             .to_path_buf()
             .join("rust")
-            .join("plugin")
+            .join("plugin_fn")
             .join("plugin_aaa");
         let curr = curr.to_str().unwrap();
         let mut cmd = Command::new("cargo");
