@@ -1,64 +1,41 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-    sync::{Arc, RwLock},
-};
+use axum::{Router, body::Body, extract::State, http::Response, routing::get};
+use libcommon::prelude::{Result, info};
+use pluginr_interface::Resp;
+use std::sync::Arc;
+use tokio::net::TcpListener;
 
-use async_trait::async_trait;
-use axum::Router;
-use libcommon::prelude::*;
-use libloading::Library;
-use serde::{Deserialize, Serialize};
+pub type PluginId = String;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PluginRoute {
-    pub path: String,
-    pub method: String,
-    pub handler: String,
-}
+#[derive(Default)]
+pub struct AppState {}
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PluginInfo {
-    pub name: String,
-    pub version: String,
-    pub routes: Vec<PluginRoute>,
-}
+pub struct App;
 
-#[async_trait]
-pub trait AxumPlugin: Send + Sync {
-    fn get_info(&self) -> PluginInfo;
-    fn register_router(&self, router: Router) -> Router;
-}
-pub struct PluginManager {
-    plugins: RwLock<HashMap<String, (Library, Arc<dyn AxumPlugin>)>>,
-    plugin_dir: PathBuf,
-}
-
-impl PluginManager {
-    pub fn new(plugin_dir: impl AsRef<Path>) -> Self {
-        Self {
-            plugins: RwLock::new(HashMap::new()),
-            plugin_dir: plugin_dir.as_ref().to_path_buf(),
-        }
+impl App {
+    pub fn new() -> Self {
+        App {}
     }
 
-    pub fn load_plugin<P: AsRef<Path>>(&self, lib_path: P) -> Result<()> {
-        self.load_plugin_impl(lib_path.as_ref())
-    }
+    pub async fn run(&self, addr: &str) -> Result<()> {
+        let state = Arc::new(AppState::default());
 
-    fn load_plugin_impl(&self, lib_path: &Path) -> Result<()> {
+        let app = Router::new()
+            .route("/", get(|| async { "Hello, World!" }))
+            .route("/admin/plugins/list", get(Self::list_plugins_handler))
+            .route("/admin/plugins/scan", get(Self::scan_plugins_handler))
+            .with_state(state.clone());
+
+        let listener = TcpListener::bind(addr).await?;
+        info!("Listening on http://{addr}");
+        axum::serve(listener, app).await?;
         Ok(())
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use libcommon::prelude::*;
+    async fn list_plugins_handler(State(state): State<Arc<AppState>>) -> Response<Body> {
+        Resp::success("ok").into()
+    }
 
-    #[test]
-    fn test_manager() -> Result<()> {
-        PluginManager::new("");
-        Ok(())
+    async fn scan_plugins_handler(State(state): State<Arc<AppState>>) -> Response<Body> {
+        Resp::success("ok").into()
     }
 }

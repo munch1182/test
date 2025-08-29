@@ -6,6 +6,8 @@ members = [
     "plugin_fn/pluginf_aaa",
     "plugin_fn/pluginf_interface",
     "plugin_fn/pluginf_manager",
+    "plugin_router/pluginr_aaa",
+    "plugin_router/pluginr_interface",
     "plugin_router/pluginr_manager",
     "search",
     "wasm_appdev",
