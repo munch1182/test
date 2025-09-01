@@ -14,20 +14,26 @@ impl<T: Serialize> Into<Response<Body>> for Resp<T> {
     }
 }
 
+impl Resp<String> {
+    pub fn error<S: ToString>(code: u16, msg: S) -> Self {
+        Self {
+            code,
+            msg: msg.to_string(),
+            data: None,
+        }
+    }
+
+    pub fn syserr<S: ToString>(msg: S) -> Self {
+        Self::error(1, msg)
+    }
+}
+
 impl<T> Resp<T> {
     pub fn success(data: T) -> Self {
         Self {
             code: 0,
             msg: String::from("success"),
             data: Some(data),
-        }
-    }
-
-    pub fn error<S: ToString>(code: u16, msg: S) -> Self {
-        Self {
-            code,
-            msg: msg.to_string(),
-            data: None,
         }
     }
 
