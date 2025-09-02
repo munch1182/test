@@ -1,11 +1,11 @@
 mod resp;
-pub use axum::{body::Body, http::Request};
+use axum::{body::Body, extract::Request, http::Response};
 use libcommon::hash;
-pub use resp::*;
+
+pub use crate::resp::Resp;
 
 pub trait PluginHandle: Send + Sync + 'static {
-    // todo async
-    fn handle(&self, req: Request<Body>) -> Resp<String>;
+    fn handle(&self, req: Request<Body>) -> Response<Body>;
 }
 
 pub struct PluginInfo {
@@ -16,6 +16,6 @@ pub struct PluginInfo {
 
 impl PluginInfo {
     pub fn generate_id(&self) -> String {
-        hash!(&self.name, &self.version).to_string()
+        format!("{:x}", hash!(&self.name, &self.version))
     }
 }

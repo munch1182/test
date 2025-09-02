@@ -4,10 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-axum = "0.8.4"
+axum = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.47", features = ["full"] }
 libcommon = { git = "https://github.com/munch1182/p2.git", branch = "master", package = "libcommon" }
-stabby = "72.1.1"
 async-trait = "0.1"

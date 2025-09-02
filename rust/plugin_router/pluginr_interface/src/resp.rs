@@ -8,9 +8,9 @@ pub struct Resp<T> {
     pub data: Option<T>,
 }
 
-impl<T: Serialize> Into<Response<Body>> for Resp<T> {
-    fn into(self) -> Response<Body> {
-        Json(self).into_response()
+impl<T: Serialize> From<Resp<T>> for Response<Body> {
+    fn from(val: Resp<T>) -> Self {
+        Json(val).into_response()
     }
 }
 

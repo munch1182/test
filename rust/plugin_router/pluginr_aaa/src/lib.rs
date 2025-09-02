@@ -1,4 +1,10 @@
-use pluginr_interface::{Body, PluginHandle, PluginInfo, Request, Resp};
+use axum::{
+    body::Body,
+    http::{Request, Response},
+};
+use pluginr_interface::{PluginHandle, PluginInfo, Resp};
+use serde_json::json;
+use std::env::current_dir;
 
 struct PluginAAA;
 
@@ -13,9 +19,10 @@ impl PluginAAA {
 }
 
 impl PluginHandle for PluginAAA {
-    fn handle(&self, req: Request<Body>) -> Resp<String> {
+    fn handle(&self, req: Request<Body>) -> Response<Body> {
         let uri = req.uri().to_string();
-        Resp::success(format!("uri: {uri}"))
+        let data = json!({"uri":uri, "curr": current_dir().unwrap_or_default()});
+        Resp::success(data).into()
     }
 }
 
@@ -31,9 +38,10 @@ mod tests {
     use libcommon::{
         ext::{PathJoinExt, PrettyStringExt},
         log::log_setup,
-        prelude::info,
+        prelude::{info, timer},
     };
 
+    #[timer]
     #[test]
     fn generate() -> std::io::Result<()> {
         log_setup();

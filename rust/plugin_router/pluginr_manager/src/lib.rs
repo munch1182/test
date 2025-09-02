@@ -1,3 +1,4 @@
+mod netlog;
 mod scan;
 use crate::scan::Scanner;
 use axum::{
@@ -5,6 +6,7 @@ use axum::{
     body::Body,
     extract::{Path as UrlPath, Request, State},
     http::Response,
+    middleware,
     routing::{any, get},
 };
 use libcommon::{
@@ -21,12 +23,12 @@ use std::{
 use tokio::net::TcpListener;
 
 pub type PluginId = String;
-type PLUGINS = HashMap<PluginId, Box<PluginInfo>>;
+type Plugins = HashMap<PluginId, Box<PluginInfo>>;
 
 #[derive(Default)]
 pub struct AppState {
     _libs: Arc<RwLock<Vec<Library>>>,
-    plugins: Arc<RwLock<PLUGINS>>,
+    plugins: Arc<RwLock<Plugins>>,
     addr: String,
 }
 
@@ -42,12 +44,17 @@ impl AppState {
         &self.addr
     }
 }
-
 pub struct App;
+
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl App {
     pub fn new() -> Self {
-        App {}
+        Self {}
     }
 
     pub async fn run(&self, addr: &str) -> Result<()> {
@@ -59,7 +66,8 @@ impl App {
             .route("/admin/plugins/scan", get(Self::scan_plugins_handler))
             .route("/plugin/{id}", any(Self::plugin_handler))
             .fallback(any(Self::dyn_handle))
-            .with_state(state.clone());
+            .with_state(state.clone())
+            .layer(middleware::from_fn(netlog::print_request_response));
 
         let listener = TcpListener::bind(addr).await?;
         info!("Listening on http://{addr}");
@@ -78,8 +86,7 @@ impl App {
         if let Ok(h) = map {
             if let Some(p) = h.get(&id) {
                 let res = p.handle.handle(req);
-                info!("plugin: {id} handle: {res:?}");
-                return res.into();
+                return res;
             }
         }
 
@@ -106,13 +113,13 @@ impl App {
         match state.plugins.read() {
             Ok(h) => {
                 let data = h
-                    .iter()
-                    .map(|(_, v)| PluginListResp::new(v, &req).to_json())
+                    .values()
+                    .map(|v| PluginListResp::new(v, &req).to_json())
                     .collect::<Vec<_>>();
-                info!("list plugins: {:?}", data);
-                return Resp::success(data).into();
+                info!("list plugins: {data:?}");
+                Resp::success(data).into()
             }
-            Err(r) => return Resp::error(2, format!("{r}")).into(),
+            Err(r) => Resp::error(2, format!("{r}")).into(),
         }
     }
 
@@ -122,9 +129,9 @@ impl App {
                 for (l, p) in Self::scan_plugins_impl() {
                     let k = p.generate_id();
                     info!(
-                        "scaned plugin: {k}: {}: {}",
+                        "scaned plugin: {k}: {}: http://{}/plugin/{k}",
                         p.name,
-                        format!("http://{}/plugin/{k}", state.addr())
+                        state.addr()
                     );
                     h.insert(k, p);
                     lib.push(l);

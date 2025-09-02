@@ -15,7 +15,7 @@ impl Scanner {
 
     pub fn scan<P: AsRef<Path>>(&self, dir: P) -> Result<Vec<(Library, Box<PluginInfo>)>> {
         let mut vec = vec![];
-        self.scan_file(dir.as_ref(), &mut vec)?;
+        Self::scan_file(dir.as_ref(), &mut vec)?;
 
         let mut result = vec![];
         for ele in vec {
@@ -33,20 +33,17 @@ impl Scanner {
         Ok((lib, info))
     }
 
-    fn scan_file(&self, dir: &Path, vec: &mut Vec<PathBuf>) -> Result<()> {
-        for ele in fs::read_dir(dir)? {
-            if let Ok(ele) = ele {
-                let path = ele.path();
-                if path.is_dir() {
-                    self.scan_file(&path, vec)?;
-                } else if path.is_file()
-                    && let Some(ext) = path.extension()
-                {
-                    if ext == "so" || ext == "dll" || ext == "dylib" {
-                        vec.push(path);
-                    }
-                };
-            }
+    fn scan_file(dir: &Path, vec: &mut Vec<PathBuf>) -> Result<()> {
+        for ele in (fs::read_dir(dir)?).flatten() {
+            let path = ele.path();
+            if path.is_dir() {
+                Self::scan_file(&path, vec)?;
+            } else if path.is_file()
+                && let Some(ext) = path.extension()
+                && (ext == "so" || ext == "dll" || ext == "dylib")
+            {
+                vec.push(path);
+            };
         }
         Ok(())
     }

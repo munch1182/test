@@ -10,5 +10,5 @@ crate-type = ["cdylib"]
 pluginr_interface = { path = "../pluginr_interface" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-stabby = "72.1.1"
 libcommon = { git = "https://github.com/munch1182/p2.git", branch = "master", package = "libcommon" }
+axum = "0.8"
