@@ -1,7 +1,7 @@
 [workspace]
 resolver = "3"
 members = [
-    "appdev",
+    "appdev", "axum_graphql",
     "loading",
     "plugin_fn/pluginf_aaa",
     "plugin_fn/pluginf_interface",
