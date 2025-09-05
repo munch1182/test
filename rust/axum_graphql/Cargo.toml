@@ -4,10 +4,19 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-async-graphql = "7.0"
+async-graphql = { version = "7.0", features = ["chrono"] }
 async-graphql-axum = "7.0"
 async-stream = "0.3.6"
 axum = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+dotenv = "0.15"
 futures-util = "0.3"
 serde = { version = "1.0", features = ["derive"] }
+sqlx = { version = "0.8", features = [
+    "sqlite",
+    "runtime-tokio-native-tls",
+    "chrono",
+] }
 tokio = { version = "1.47", features = ["full"] }
+libcommon = { git = "https://github.com/munch1182/p2.git", branch = "master", package = "libcommon", features = [
+] }
