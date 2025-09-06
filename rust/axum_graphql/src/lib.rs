@@ -1,4 +1,3 @@
-use axum::Router;
 use libcommon::{newerr, prelude::Result};
 use tokio::net::TcpListener;
 
@@ -16,8 +15,7 @@ impl App {
         let db_router = db::db_router(addr)
             .await
             .map_err(|e| newerr!("db connect error: {:?}", e))?;
-        let router = Router::new().merge(db_router);
-        axum::serve(listener, router).await?;
+        axum::serve(listener, db_router).await?;
         Ok(())
     }
 }

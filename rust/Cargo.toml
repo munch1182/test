@@ -1,7 +1,8 @@
 [workspace]
 resolver = "3"
 members = [
-    "appdev", "axum_graphql",
+    "appdev",
+    "axum_graphql",
     "loading",
     "plugin_fn/pluginf_aaa",
     "plugin_fn/pluginf_interface",
@@ -9,6 +10,7 @@ members = [
     "plugin_router/pluginr_aaa",
     "plugin_router/pluginr_interface",
     "plugin_router/pluginr_manager",
-    "search", "tauri_impl",
+    "search",
+    "tauri_impl",
     "wasm_appdev",
 ]

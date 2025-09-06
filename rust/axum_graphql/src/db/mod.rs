@@ -3,7 +3,12 @@ mod datac;
 
 use crate::db::data::{MutationRoot, QueryRoot};
 use async_graphql::{EmptySubscription, Schema};
-use axum::{Extension, Router, response::IntoResponse, routing::post};
+use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
+use axum::{
+    Extension, Router,
+    response::IntoResponse,
+    routing::{get, post},
+};
 use libcommon::prelude::info;
 use sqlx::{Pool, Sqlite, sqlite::SqlitePoolOptions};
 use std::{env, sync::Arc};
@@ -27,8 +32,8 @@ pub async fn db_router(host: &str) -> SqlResult<Router> {
     let schema = create_schema(pool);
 
     let router = Router::new()
+        .route("/graphiql", get(graphiql))
         .route("/graphql", post(graphql_handler))
-        .route("/graphiql", axum::routing::get(graphiql))
         .layer(Extension(Arc::new(schema)));
     info!("Listening on http://{host}/graphql");
     info!("Listening on http://{host}/graphiql");
@@ -41,7 +46,7 @@ async fn graphiql() -> impl IntoResponse {
 
 async fn graphql_handler(
     Extension(schema): Extension<Arc<AppSchema>>,
-    req: async_graphql_axum::GraphQLRequest,
-) -> async_graphql_axum::GraphQLResponse {
+    req: GraphQLRequest,
+) -> GraphQLResponse {
     schema.execute(req.into_inner()).await.into()
 }

@@ -73,4 +73,12 @@ impl MutationRoot {
 
         Ok(result.id as u32)
     }
+
+    async fn delete_user(&self, ctx: &Context<'_>, id: u32) -> SqlResult<bool> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let result = query!("DELETE FROM users WHERE id = ?", id)
+            .execute(pool)
+            .await?;
+        Ok(result.rows_affected() > 0)
+    }
 }

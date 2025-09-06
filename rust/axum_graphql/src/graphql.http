@@ -11,7 +11,7 @@ POST http://127.0.0.1:3000/graphql
 Content-Type: application/json
 
 {
-  "query": "query { user(id:2) { id name } }"
+  "query": "query { user(id:2) { name email} }"
 }
 
 ###
@@ -24,3 +24,10 @@ Content-Type: application/json
 }
 
 ###
+
+POST http://127.0.0.1:3000/graphql
+Content-Type: application/json
+
+{
+  "query": "mutation { deleteUser(id:3) }"
+}
