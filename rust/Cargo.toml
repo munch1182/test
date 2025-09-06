@@ -9,6 +9,6 @@ members = [
     "plugin_router/pluginr_aaa",
     "plugin_router/pluginr_interface",
     "plugin_router/pluginr_manager",
-    "search",
+    "search", "tauri_impl",
     "wasm_appdev",
 ]
