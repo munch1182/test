@@ -22,6 +22,8 @@ pub struct CreateUserInput {
 pub struct QueryRoot;
 pub struct MutationRoot;
 
+// cargo install sqlx-cli
+// sqlx migrate run
 #[Object]
 impl QueryRoot {
     ///
