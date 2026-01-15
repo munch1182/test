@@ -4,6 +4,8 @@ Thumbs.db
 .vscode/
 .idea/
 
+log/
+
 target/
 *.rs.bk
 
