@@ -1,0 +1,33 @@
+// proto/echo.proto
+syntax = "proto3";
+
+package echo.v1;
+
+// 最简单的服务
+service EchoService {
+    // 单次请求-响应
+    rpc Echo(EchoRequest) returns (EchoResponse);
+    
+    // 服务端流式响应
+    rpc StreamEcho(StreamEchoRequest) returns (stream EchoResponse);
+    
+    // 客户端流式请求
+    rpc ClientStreamEcho(stream EchoRequest) returns (EchoResponse);
+}
+
+// 请求消息
+message EchoRequest {
+    string message = 1;
+}
+
+// 响应消息
+message EchoResponse {
+    string message = 1;
+    int64 timestamp = 2;
+}
+
+// 流式请求
+message StreamEchoRequest {
+    string prefix = 1;
+    int32 count = 2;
+}
