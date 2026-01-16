@@ -1,0 +1,12 @@
+[package]
+name = "plugin"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+async-trait = "0.1"
+libcommon = { git = "https://github.com/munch1182/p2.git", package = "libcommon" }
+serde = { version = "1.0", features = ["derive"] }

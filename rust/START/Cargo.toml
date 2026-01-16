@@ -1,0 +1,3 @@
+[workspace]
+members = ["plugin", "plugin-manager", "plugins/plugin-adb-connect"]
+resolver = "3"

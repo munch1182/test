@@ -1,0 +1,16 @@
+[package]
+name = "plugin-adb-connect"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+plugin = { path = "../../plugin" }
+libcommon = { git = "https://github.com/munch1182/p2.git", package = "libcommon", features = [
+    "logfile",
+] }
+async-trait = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
