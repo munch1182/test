@@ -1,3 +1,23 @@
 [workspace]
 members = ["plugin", "plugin-manager", "plugins/plugin-adb-connect"]
 resolver = "3"
+
+[workspace.dependencies]
+
+libcommon = { git = "https://github.com/munch1182/p2.git", package = "libcommon" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# 异步 trait 定义，可以被tonic::async_trait替代
+async-trait = "0.1"
+
+# 基础异步库，不依赖特定运行时，异步定义
+futures = "0.3"
+# tokio 异步运行时
+tokio = { version = "1", features = ["full"] }
+# grpc 异步库
+tonic = { version = "0.14" }
+# tokio实现的异步流
+tokio-stream = { version = "0.1" }
+# 简化流的创建
+async-stream = "0.3"

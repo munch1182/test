@@ -4,12 +4,22 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-libcommon = { git = "https://github.com/munch1182/p2.git", package = "libcommon", features = [
-    "logfile",
-] }
-libloading = "0.9"
+
 plugin = { path = "../plugin" }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-tokio = { version = "1", features = ["full"] }
+
+libloading = "0.9"
+
+libcommon = { workspace = true }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+tokio = { workspace = true }
+
+async-trait = { workspace = true }
+
+async-stream = { workspace = true }
+tokio-stream = { workspace = true }
+
 sha256 = "1.6"
+dashmap = "6.1"

@@ -1,8 +1,10 @@
-#[cfg(target_os = "windows")]
+use libcommon::curr_dir;
+use libcommon::ext::{Command, CommandInExt};
+use std::fs;
+use std::time::Instant;
+
+#[ignore = "execute"]
 fn main() {
-    use libcommon::curr_dir;
-    use libcommon::ext::{Command, CommandInExt};
-    use std::time::Instant;
     {
         let file = curr_dir!("plugins", "plugin-adb-connect").unwrap();
 
@@ -24,7 +26,8 @@ fn main() {
         let dll = target_dir.join(&name);
 
         if dll.exists() {
-            use std::fs;
+            let size = (dll.metadata().unwrap().len() as f32) / 1024f32 / 1024f32;
+            println!("dll: {name} => {size} mb");
 
             let dist_dir = curr_dir!("plugins", "dist", "plugin_adb_connect")
                 .unwrap()

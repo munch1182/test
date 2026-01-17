@@ -1,20 +1,50 @@
-use libcommon::prelude::Result;
+use futures::Stream;
+use libcommon::{newerr, prelude::Result};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
+    pin::Pin,
 };
 
-#[async_trait::async_trait]
-pub trait PluginInterface: Send + Sync {
+pub type PinStreamItem<T> = Pin<Box<dyn Stream<Item = T> + Send>>;
+
+#[tonic::async_trait]
+pub trait PluginCommunicator {
+    /// 执行插件方法
+    async fn execute(&self, data: Vec<u8>) -> Result<Vec<u8>>;
+
+    /// 流式执行插件方法
+    #[allow(unused_variables)]
+    async fn execute_stream(&self, data: Vec<u8>) -> Result<PinStreamItem<Vec<u8>>> {
+        Err(newerr!("Not implemented"))
+    }
+
+    /// 从流中接收数据并执行插件方法
+    #[allow(unused_variables)]
+    async fn execute_from_stream(&self, data: PinStreamItem<Vec<u8>>) -> Result<Vec<u8>> {
+        Err(newerr!("Not implemented"))
+    }
+
+    /// 双向流式执行插件方法
+    #[allow(unused_variables)]
+    async fn execute_stream_with_stream(
+        &self,
+        data: PinStreamItem<Vec<u8>>,
+    ) -> Result<PinStreamItem<Vec<u8>>> {
+        Err(newerr!("Not implemented"))
+    }
+}
+
+#[tonic::async_trait]
+pub trait PluginInterface: PluginCommunicator + Send + Sync {
     /// 初始化插件
     async fn initialize(&self) -> Result<()> {
         Ok(())
     }
     /// 获取插件信息
     fn get_metadata(&self) -> PluginMetadata;
-    /// 执行插件方法
-    async fn execute(&self, data: Vec<u8>) -> Result<Vec<u8>>;
+
     /// 清理插件资源
     async fn cleanup(&self) -> Result<()> {
         Ok(())
@@ -42,11 +72,16 @@ pub struct PluginMetadata {
     /// 作者
     pub author: String,
     /// 描述
-    pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
     /// 支持的API版本
-    pub api_version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub api_version: Option<String>,
     /// 插件类型
     pub plugin_type: PluginType,
+    /// 插件配置
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub config: Option<PluginConfig>,
 }
 
 impl PluginMetadata {
@@ -54,33 +89,34 @@ impl PluginMetadata {
         name: &str,
         version: &str,
         author: &str,
-        description: &str,
+        description: Option<&str>,
         plugin_type: PluginType,
     ) -> Self {
         Self {
             name: name.to_string(),
             version: version.to_string(),
             author: author.to_string(),
-            description: description.to_string(),
-            api_version: "0.1.0".to_string(),
+            description: description.map(|s| s.to_string()),
+            api_version: None,
             plugin_type,
+            config: None,
         }
     }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct PluginConfig {
-    /// 插件目录路径
+    /// 插件目录路径, 默认位配置文件所在文件夹
     pub plugin_dir: PathBuf,
-    /// 动态库文件名 (不包含扩展名)
+    /// 动态库文件名 (不包含扩展名)，默认与插件名一致
     pub library_name: String,
-    /// 插件入口点函数名
+    /// 插件入口点函数名, 默认为 "create_plugin"
     pub entry_point: String,
     /// 前端服务地址 (如果有)
     pub frontend_url: Option<String>,
-    /// 插件依赖
+    /// 插件依赖, 默认为空
     pub dependencies: Vec<String>,
-    /// 配置参数
+    /// 配置参数, 默认为空
     pub parameters: HashMap<String, String>,
 }
 

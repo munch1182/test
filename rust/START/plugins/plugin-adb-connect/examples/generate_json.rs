@@ -3,6 +3,7 @@ use plugin::PluginInterface;
 use plugin_adb_connect::PluginAdbConnect;
 use std::{fs, path::Path};
 
+#[ignore = "execute"]
 fn main() {
     let meta = PluginAdbConnect.get_metadata();
 

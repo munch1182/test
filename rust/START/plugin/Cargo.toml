@@ -7,6 +7,7 @@ edition = "2024"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-async-trait = "0.1"
-libcommon = { git = "https://github.com/munch1182/p2.git", package = "libcommon" }
-serde = { version = "1.0", features = ["derive"] }
+libcommon = { workspace = true }
+serde = { workspace = true }
+tonic = { workspace = true }
+futures = { workspace = true }

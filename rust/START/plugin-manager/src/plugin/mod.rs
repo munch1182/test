@@ -1,6 +1,10 @@
 mod manager;
-use std::fmt::{Debug, Display};
+use std::{
+    fmt::{Debug, Display},
+    path::Path,
+};
 
+use libcommon::prelude::trace;
 pub use manager::*;
 use plugin::{PluginConfig, PluginInterface, PluginMetadata, PluginStatus};
 use serde::{Deserialize, Serialize};
@@ -17,7 +21,13 @@ pub struct PluginInstance {
 }
 
 impl PluginInstance {
-    pub fn new(metadata: PluginMetadata, config: PluginConfig) -> Self {
+    pub fn new(metadata: PluginMetadata, dir: &Path) -> Self {
+        let config = if let Some(config) = &metadata.config {
+            config.clone()
+        } else {
+            trace!("No config found for plugin, using default");
+            PluginConfig::default(metadata.name.clone(), dir)
+        };
         Self {
             metadata,
             config,

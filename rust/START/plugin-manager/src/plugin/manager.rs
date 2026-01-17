@@ -1,26 +1,22 @@
 use crate::{PluginHandle, PluginId, PluginInstance};
-use libcommon::{
-    newerr,
-    prelude::{Result, debug, info, trace},
-};
+use dashmap::DashMap;
+use libcommon::{newerr, prelude::*};
 use libloading::{Library, Symbol};
 use plugin::{PluginConfig, PluginInterface, PluginMetadata, PluginStatus};
 use serde::de::DeserializeOwned;
-use std::{collections::HashMap, fs, path::Path, sync::Arc};
-use tokio::sync::Mutex;
+use std::{fs, path::Path, pin::Pin};
 
 #[derive(Default)]
 pub struct PluginManager {
-    plugins: Arc<Mutex<HashMap<PluginId, PluginInstance>>>,
+    pub plugins: DashMap<PluginId, PluginInstance>,
 }
 
 const PLUGIN_JSON_NAME: &str = "plugin.json";
-const CONFIG_JSON_NAME: &str = "config.json";
 
 type CreatePluginFn = extern "Rust" fn() -> Box<dyn PluginInterface>;
 
 impl PluginManager {
-    pub async fn scan(&self, path: impl AsRef<Path>) -> Result<Vec<PluginId>> {
+    pub fn scan(&self, path: impl AsRef<Path>) -> Result<Vec<PluginId>> {
         let mut loaded_ids = vec![];
 
         let path = path.as_ref();
@@ -34,7 +30,7 @@ impl PluginManager {
         for entry in (fs::read_dir(path)?).flatten() {
             let path = entry.path();
             if path.is_dir()
-                && let Some(id) = self.register_plugin_from_dir(&path).await
+                && let Some(id) = self.register_plugin_from_dir(&path)
             {
                 loaded_ids.push(id);
             }
@@ -44,48 +40,53 @@ impl PluginManager {
     }
 
     pub async fn load_plugin(&self, id: &PluginId) -> Result<()> {
-        {
-            let (lib_path, entry) = {
-                let plugins = self.plugins.lock().await;
-                let instance = {
-                    if let Some(instance) = plugins.get(id)
-                        && instance.status < PluginStatus::Running
-                    {
-                        instance
-                    } else {
-                        trace!("load plugin {id:?} not found or already running");
-                        return Err(newerr!("err 1"));
-                    }
-                };
-                (
-                    instance.config.plugin_dir.join(format!(
-                        "{}.{}",
-                        instance.config.library_name,
-                        Self::get_library_extension()
-                    )),
-                    instance.config.entry_point.clone(),
-                )
-            };
-            info!(
-                "[{id}] load plugin library from {} with entry {entry}",
-                lib_path.to_string_lossy()
-            );
-            if lib_path.exists() {
-                let (handle, status) = self.init_plugin(id, &lib_path, entry).await?;
+        let (lib_path, entry) = {
+            let plugins = &self.plugins;
+            let instance = {
+                if let Some(instance) = plugins.get(id)
+                    && instance.status < PluginStatus::Running
                 {
-                    if let Some(instance) = self.plugins.lock().await.get_mut(id) {
-                        instance.handle = Some(handle);
-                        instance.update_status(status);
-                        return Ok(());
-                    }
+                    instance
+                } else {
+                    trace!("load plugin {id:?} not found or already running");
+                    return Err(newerr!("load plugin {id:?} not found or already running"));
                 }
-            }
+            };
+            let name = format!(
+                "{}.{}",
+                instance.config.library_name,
+                Self::get_library_extension()
+            );
+            (
+                instance.config.plugin_dir.join(name),
+                instance.config.entry_point.clone(),
+            )
+        };
+        info!(
+            "[{id}] load plugin library from {} with entry {entry}",
+            lib_path.to_string_lossy()
+        );
+        if !lib_path.exists() {
+            return Err(newerr!("[{id}] library not found: {lib_path:?}"));
         }
-        Err(newerr!("fail"))
+        let (handle, status) = self.init_plugin(id, &lib_path, entry).await?;
+        {
+            self.plugins.entry(id.clone()).and_modify(|instance| {
+                instance.handle = Some(handle);
+                instance.update_status(status);
+            });
+        }
+        if let Some(get) = self.plugins.get(id)
+            && get.status == PluginStatus::Running
+        {
+            info!("[{id}] plugin loaded");
+            return Ok(());
+        }
+        Err(newerr!("[{id}] plugin load failed"))
     }
 
     pub async fn unload_plugin(&self, id: &PluginId) -> Result<()> {
-        if let Some(instance) = self.plugins.lock().await.get_mut(id)
+        if let Some(mut instance) = self.plugins.get_mut(id)
             && instance.status >= PluginStatus::Running
         {
             if let Some(handle) = instance.handle.take() {
@@ -102,31 +103,55 @@ impl PluginManager {
         self.load_plugin(&id).await
     }
 
-    pub async fn call_plugin(&self, id: PluginId, data: Vec<u8>) -> Result<Vec<u8>> {
-        if let Some(instance) = self.plugins.lock().await.get(&id)
-            && instance.status >= PluginStatus::Running
-            && let Some(handle) = instance.handle.as_ref()
-        {
-            return handle.interface.execute(data).await;
+    pub async fn call<CALL, R>(&self, id: &PluginId, call: CALL) -> Result<R>
+    where
+        CALL: for<'a> FnOnce(
+            &'a dyn PluginInterface,
+        ) -> Pin<Box<dyn Future<Output = Result<R>> + Send + 'a>>,
+    {
+        let instance = self
+            .plugins
+            .get(id)
+            .ok_or_else(|| newerr!("plugin not found"))?;
+
+        if instance.status < PluginStatus::Running {
+            return Err(newerr!("plugin not running"));
         }
-        Err(newerr!("fail"))
+
+        let interface = instance
+            .handle
+            .as_ref()
+            .ok_or_else(|| newerr!("plugin handle not found"))?
+            .interface
+            .as_ref();
+
+        call(interface).await
+    }
+
+    pub async fn call_plugin(&self, id: &PluginId, data: Vec<u8>) -> Result<Vec<u8>> {
+        self.call(id, |interface| interface.execute(data)).await
     }
 
     pub async fn list_plugins(&self) -> Result<Vec<(PluginId, PluginMetadata)>> {
         Ok(self
             .plugins
-            .lock()
-            .await
             .iter()
-            .map(|(id, instance)| (id.clone(), instance.metadata.clone()))
+            .map(|entry| (entry.key().clone(), entry.value().metadata.clone()))
             .collect())
     }
 
-    pub async fn get_plugin(&self, id: PluginId) -> Option<PluginInfo> {
-        self.plugins.lock().await.get(&id).map(|s| s.into())
+    pub fn get_plugin(&self, id: PluginId) -> Option<PluginInfo> {
+        self.plugins.get(&id).map(|instance| {
+            let instance = instance.value();
+            PluginInfo {
+                metadata: instance.metadata.clone(),
+                config: instance.config.clone(),
+                status: instance.status,
+            }
+        })
     }
 
-    pub async fn init_plugin(
+    async fn init_plugin(
         &self,
         id: &PluginId,
         lib_path: &Path,
@@ -156,7 +181,7 @@ impl PluginManager {
         Ok((PluginHandle { library, interface }, status))
     }
 
-    pub async fn register_plugin_from_dir(&self, dir: &Path) -> Option<PluginId> {
+    fn register_plugin_from_dir(&self, dir: &Path) -> Option<PluginId> {
         fn read<D: DeserializeOwned>(dir: &Path) -> Result<D> {
             Ok(serde_json::from_reader(fs::File::open(dir)?)?)
         }
@@ -175,26 +200,12 @@ impl PluginManager {
             }
         };
 
-        let config = {
-            let cfg = dir.join(CONFIG_JSON_NAME);
-            debug!("read plugin config: {}", cfg.to_string_lossy());
-            if cfg.exists()
-                && let Ok(cfg) = read::<PluginConfig>(&cfg)
-            {
-                debug!("readed plugin config: {cfg:?}");
-                cfg
-            } else {
-                debug!("read plugin config fail or not exists, use default config");
-                PluginConfig::default(&metadata.name, dir)
-            }
-        };
-
         let id = PluginId::new(&metadata);
         info!("register plugin: {}: {id:?}", &metadata.name);
         {
-            let mut instance = PluginInstance::new(metadata, config);
+            let mut instance = PluginInstance::new(metadata, dir);
             instance.update_status(PluginStatus::Registered);
-            self.plugins.lock().await.insert(id.clone(), instance);
+            self.plugins.insert(id.clone(), instance);
         }
 
         Some(id)
@@ -210,8 +221,8 @@ impl PluginManager {
     }
 
     pub async fn cleanup(&self) {
-        for instance in self.plugins.lock().await.values_mut() {
-            if let Some(handle) = instance.handle.take() {
+        for mut ele in self.plugins.iter_mut() {
+            if let Some(handle) = ele.handle.take() {
                 let _ = handle.interface.cleanup().await;
             }
         }
