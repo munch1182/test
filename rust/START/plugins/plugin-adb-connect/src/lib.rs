@@ -1,55 +1,94 @@
-use async_stream::stream;
-use futures_timer::Delay;
-use libcommon::prelude::Result;
-use plugin::{PinStreamItem, PluginCommunicator, PluginInterface, PluginMetadata, export_plugin};
-use std::time::Duration;
-use tokio_stream::StreamExt;
+mod adb;
+use crate::adb::{ConnectResult, PairInfo};
+use libcommon::{
+    newerr,
+    prelude::{Result, info},
+};
+use plugin::{PluginInterface, PluginMetadata, PluginTypeCommunicator, export_plugin};
+use serde::{Deserialize, Serialize};
 
 pub struct PluginAdbConnect;
 
+#[derive(Debug, Deserialize, Serialize)]
+pub enum AdbCommand {
+    Connect,
+    Disconnect,
+    Pair(PairInfo),
+    Generate,
+    List,
+}
+
+pub enum AdbResult {
+    Success(String),
+    Fail(String),
+}
+
 #[tonic::async_trait]
-impl PluginCommunicator for PluginAdbConnect {
-    async fn execute(&self, data: Vec<u8>) -> Result<Vec<u8>> {
-        let str = String::from_utf8(data)?;
-        let result = format!("PluginAdbConnect received: {str} and execute: success");
-        Ok(result.into_bytes())
-    }
+impl PluginTypeCommunicator for PluginAdbConnect {
+    type In = AdbCommand;
+    type Out = AdbResult;
 
-    async fn execute_stream(&self, _data: Vec<u8>) -> Result<PinStreamItem<Vec<u8>>> {
-        let result = [
-            "PluginAdbConnect stream: success1",
-            "PluginAdbConnect stream: success2",
-            "PluginAdbConnect stream: success3",
-            "PluginAdbConnect stream: success4",
-        ]
-        .iter()
-        .map(|s| s.as_bytes().to_vec())
-        .collect::<Vec<_>>();
-        Ok(Box::pin(stream! {
-            for item in result{
-                yield item;
-            }
-        }))
-    }
-
-    async fn execute_stream_with_stream(
-        &self,
-        data: PinStreamItem<Vec<u8>>,
-    ) -> Result<PinStreamItem<Vec<u8>>> {
-        let mut data = data;
-
-        // 创建异步流
-        let output_stream = stream! {
-            while let Some(item) = data.next().await { // 接收时，因为是冷流，只有在接收时流才会发送，因此此处接收与发送是同步的
-                if let Ok(bytes) = item.try_into() {
-                    let s = i32::from_le_bytes(bytes);
-                    yield (s + 1).to_le_bytes().to_vec(); // 发送时
-                    Delay::new(Duration::from_secs(2)).await; // 因此编译成library的关系，此处无法获取tokio的运行时，因此此次使用futures_timer，与运行时无关
-                }
+    async fn call(&self, data: Self::In) -> Result<Self::Out> {
+        let result = match data {
+            AdbCommand::Connect => adb::connect(),
+            AdbCommand::Disconnect => adb::disconnect(),
+            AdbCommand::Pair(info) => adb::connect_with_pair(info),
+            AdbCommand::List => adb::list(),
+            AdbCommand::Generate => {
+                let pair = adb::PairInfo::new();
+                let str = format!("server: {}, pwd:{}", pair.get_server(), pair.get_pwd());
+                return Ok(AdbResult::Success(str));
             }
         };
+        Ok(result.into())
+    }
+}
 
-        Ok(Box::pin(output_stream))
+impl From<AdbResult> for Vec<u8> {
+    fn from(value: AdbResult) -> Self {
+        match value {
+            AdbResult::Success(s) => format!("success: {s}"),
+            AdbResult::Fail(s) => s,
+        }
+        .as_bytes()
+        .to_vec()
+    }
+}
+
+impl TryFrom<Vec<u8>> for AdbCommand {
+    type Error = libcommon::prelude::Err;
+
+    fn try_from(value: Vec<u8>) -> std::result::Result<Self, Self::Error> {
+        let str = String::from_utf8(value)?.to_lowercase();
+        info!("adb command: {str}");
+        if str == "connect" {
+            return Ok(Self::Connect);
+        } else if str == "disconnect" {
+            return Ok(Self::Disconnect);
+        } else if str == "generate" {
+            return Ok(Self::Generate);
+        } else if str == "list" {
+            return Ok(Self::List);
+        } else {
+            let split = str.split_whitespace().collect::<Vec<_>>();
+            if split.len() == 3 {
+                let (f, s, t) = (split[0], split[1], split[2]);
+                if f == "pair" {
+                    return Ok(Self::Pair(PairInfo::from(s, t)));
+                }
+            }
+        }
+        Err(newerr!("unknow adb command: {str}"))
+    }
+}
+
+impl From<ConnectResult> for AdbResult {
+    fn from(value: ConnectResult) -> Self {
+        match value {
+            ConnectResult::ConnectSuccess => AdbResult::Success("success".to_string()),
+            ConnectResult::Err(error) => AdbResult::Fail(format!("{error:?}")),
+            ConnectResult::List(items) => AdbResult::Success(items),
+        }
     }
 }
 
@@ -67,3 +106,24 @@ impl PluginInterface for PluginAdbConnect {
 }
 
 export_plugin!(PluginAdbConnect);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_serde() -> std::io::Result<()> {
+        let c = C {
+            command: AdbCommand::Connect,
+        };
+        let str = serde_json::to_string_pretty(&c)?.to_lowercase();
+        println!("str: {str}");
+        let _: C = serde_json::from_str(&str).unwrap();
+        Ok(())
+    }
+
+    #[derive(Serialize, Deserialize)]
+    struct C {
+        command: AdbCommand,
+    }
+}

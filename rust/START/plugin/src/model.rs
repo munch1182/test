@@ -12,7 +12,10 @@ pub type PinStreamItem<T> = Pin<Box<dyn Stream<Item = T> + Send>>;
 #[tonic::async_trait]
 pub trait PluginCommunicator {
     /// 执行插件方法
-    async fn execute(&self, data: Vec<u8>) -> Result<Vec<u8>>;
+    #[allow(unused_variables)]
+    async fn execute(&self, data: Vec<u8>) -> Result<Vec<u8>>{
+        Err(newerr!("Not implemented"))
+    }
 
     /// 流式执行插件方法
     #[allow(unused_variables)]
@@ -35,6 +38,7 @@ pub trait PluginCommunicator {
         Err(newerr!("Not implemented"))
     }
 }
+
 
 #[tonic::async_trait]
 pub trait PluginInterface: PluginCommunicator + Send + Sync {

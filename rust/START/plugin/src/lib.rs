@@ -1,6 +1,8 @@
 mod model;
+mod type_call;
 
 pub use model::*;
+pub use type_call::*;
 
 #[macro_export]
 macro_rules! export_plugin {
