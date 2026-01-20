@@ -70,6 +70,10 @@ impl PluginId {
         let app = &generate_id(&meta.name)[..18];
         Self(format!("{name}{app}"))
     }
+
+    pub fn from(s: impl ToString) -> Self {
+        Self(s.to_string())
+    }
 }
 
 fn generate_id(s: &str) -> String {

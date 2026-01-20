@@ -1,5 +1,6 @@
 use crate::{PluginHandle, PluginId, PluginInstance};
 use dashmap::DashMap;
+use futures::Stream;
 use libcommon::{newerr, prelude::*};
 use libloading::{Library, Symbol};
 use plugin::{PluginConfig, PluginInterface, PluginMetadata, PluginStatus};
@@ -130,6 +131,15 @@ impl PluginManager {
 
     pub async fn call_plugin(&self, id: &PluginId, data: Vec<u8>) -> Result<Vec<u8>> {
         self.call(id, |interface| interface.execute(data)).await
+    }
+
+    pub async fn call_stream(
+        &self,
+        id: &PluginId,
+        data: Vec<u8>,
+    ) -> Result<Pin<Box<dyn Stream<Item = Vec<u8>> + Send>>> {
+        self.call(id, |interface| interface.execute_stream(data))
+            .await
     }
 
     pub async fn list_plugins(&self) -> Result<Vec<(PluginId, PluginMetadata)>> {

@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package server.v1;
+
+message PluginReq {
+  string id   = 1;
+  bytes  data = 2;
+}
+
+message PluginResp {
+  bytes data = 1;
+}
+
+message PluginReqStream {
+  oneof info {
+    string id   = 1; // 第一个消息携带id
+    bytes  data = 2;
+  }
+}
+
+/// 插件服务，转发执行请求到插件
+service PluginServer {
+  /// 执行
+  rpc Execute(PluginReq) returns (PluginResp);
+  /// 执行，返回流
+  rpc ExecuteStream(PluginReq) returns (stream PluginResp);
+  /// 发送流，返回数据
+  rpc ExecuteFromStream(stream PluginReqStream) returns (PluginResp);
+  /// 发送流，返回流
+  rpc ExecuteStreamFromStream(stream PluginReqStream) returns (stream PluginResp);
+}
