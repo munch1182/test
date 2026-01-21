@@ -20,12 +20,12 @@ pub struct AmplitudeNoiseDetector {
 }
 
 // 常量配置
-const MIN_VOICE_FRAMES: usize = 10;
-const MIN_SILENCE_FRAMES: usize = 20;
+const MIN_VOICE_FRAMES: usize = 5;
+const MIN_SILENCE_FRAMES: usize = 10;
 const ADAPTIVE_ALPHA: f64 = 0.995;
-const NOISE_STABILITY_WINDOW: usize = 20;
-const VOICE_HISTORY_WINDOW: usize = 5;
-const STATE_STABILITY_THRESHOLD: usize = 3;
+const NOISE_STABILITY_WINDOW: usize = 15;
+const VOICE_HISTORY_WINDOW: usize = 3;
+const STATE_STABILITY_THRESHOLD: usize = 2;
 
 impl AmplitudeNoiseDetector {
     pub fn new() -> Self {

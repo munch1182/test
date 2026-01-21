@@ -13,7 +13,11 @@ static DETECTOR: Mutex<LazyLock<AmplitudeNoiseDetector>> = Mutex::new(LazyLock::
 }));
 
 fn init_android_log() {
-    android_logger::init_once(android_logger::Config::default().with_tag("AmplitudeNoiseDetector"));
+    android_logger::init_once(
+        android_logger::Config::default()
+            .with_max_level(log::LevelFilter::Debug)
+            .with_tag("AmplitudeNoiseDetector"),
+    );
 }
 
 /// 处理音频帧
