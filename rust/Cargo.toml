@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "plugin",
+    "plugin-macro",
+    "plugin-manager",
+    "plugins/icons",
+    "value",
+    "app",
+]
+resolver = "3"
