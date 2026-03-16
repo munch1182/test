@@ -1,18 +1,19 @@
 use proc_macro::TokenStream;
-use quote::{quote};
+use quote::quote;
 use syn::{parse_macro_input, Data, DeriveInput, Fields, Ident};
 
 /// 为结构体派生 `Value` 转换。
 ///
 /// 自动实现：
 /// - `From<Struct> for Value`：将结构体转换为 `Value::Map`
-/// - `TryFrom<Value> for Struct`：从 `Value::Map` 还原结构体
+/// - `TryFrom<Value> for Struct`：从 `Value::Map` 还原结构体（消耗所有权）
+/// - `TryFrom<&Value> for Struct`：从 `&Value` 还原结构体（克隆字段值，不消耗原值）
 ///
 /// 支持字段属性：
 /// - `#[value(skip)]`：跳过该字段，不参与转换
 ///
 /// 假设基本类型已实现与 `Value` 的互转，且 `Value` 包含 `Map` 变体。
-#[proc_macro_derive(Value, attributes(value))]
+#[proc_macro_derive(FromValue, attributes(value))]
 pub fn derive_value(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
@@ -69,8 +70,8 @@ pub fn derive_value(input: TokenStream) -> TokenStream {
         }
     };
 
-    // 生成 `TryFrom` 实现
-    let try_from_impl = {
+    // 生成 `TryFrom<Value>` 实现（消耗所有权）
+    let try_from_owned_impl = {
         let field_names: Vec<_> = field_infos.iter().map(|(name, _)| name).collect();
         let field_types: Vec<_> = field_infos.iter().map(|(_, ty)| ty).collect();
         let field_keys: Vec<String> = field_names.iter().map(|name| name.to_string()).collect();
@@ -79,15 +80,45 @@ pub fn derive_value(input: TokenStream) -> TokenStream {
             impl #generics TryFrom<Value> for #name #generics {
                 type Error = plugin::ValueParseError;
 
-                fn try_from(value: Value) -> Result<Self, Self::Error> {
+                fn try_from(value: Value) -> std::result::Result<Self, Self::Error> {
                     match value {
                         Value::Map(mut map) => {
                             Ok(#name {
                                 #(
                                     #field_names: {
-                                        let field_value = map.remove(#field_keys)
-                                            .ok_or(plugin::ValueParseError)?;
+                                        let field_value = map.remove(#field_keys).ok_or(plugin::ValueParseError)?;
                                         <#field_types>::try_from(field_value)?
+                                    },
+                                )*
+                            })
+                        }
+                        _ => Err(plugin::ValueParseError),
+                    }
+                }
+            }
+        }
+    };
+
+    // 生成 `TryFrom<&Value>` 实现（通过引用，克隆字段值）
+    let try_from_ref_impl = {
+        let field_names: Vec<_> = field_infos.iter().map(|(name, _)| name).collect();
+        let field_types: Vec<_> = field_infos.iter().map(|(_, ty)| ty).collect();
+        let field_keys: Vec<String> = field_names.iter().map(|name| name.to_string()).collect();
+
+        quote! {
+            impl #generics TryFrom<&Value> for #name #generics {
+                type Error = plugin::ValueParseError;
+
+                fn try_from(value: &Value) -> std::result::Result<Self, Self::Error> {
+                    match value {
+                        Value::Map(map) => {
+                            Ok(#name {
+                                #(
+                                    #field_names: {
+                                        let field_value = map.get(#field_keys)
+                                            .ok_or(plugin::ValueParseError)?;
+                                        // 克隆字段值再转换，避免消耗原值
+                                        <#field_types>::try_from(field_value.clone())?
                                     },
                                 )*
                             })
@@ -102,7 +133,8 @@ pub fn derive_value(input: TokenStream) -> TokenStream {
     // 合并生成代码
     let expanded = quote! {
         #from_impl
-        #try_from_impl
+        #try_from_owned_impl
+        #try_from_ref_impl
     };
 
     TokenStream::from(expanded)

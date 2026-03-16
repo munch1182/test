@@ -1,12 +1,19 @@
-use std::{collections::HashMap, fs};
-
-use libcommon::{newerr, prelude::*};
-use plugin::Value;
+use libcommon::{
+    ext::{Command, PrettyStringExt},
+    newerr,
+    prelude::*,
+};
+use plugin::{FromValue, Value};
 use plugin_manager::manager::PluginManager;
+use std::fs;
 
 #[tokio::main]
 #[logsetup]
 async fn main() -> Result<()> {
+    let mut cmd = Command::from_str("cargo build -p icons");
+    let result = cmd.output()?;
+    info!("{}: {}", cmd.to_string_pretty(), result.status.success());
+
     let manager = PluginManager::default();
 
     fs::copy(
@@ -18,15 +25,19 @@ async fn main() -> Result<()> {
         .load("./target/debug/icons-v0.1.1.dll")
         .map_err(|e| newerr!(e))?;
 
-    let mut map = HashMap::default();
-    map.insert(String::from("name"), Value::Number(plugin::Number::U8(0)));
-    map.insert(String::from("param"), Value::Number(plugin::Number::U8(22)));
+    let value = Input2 { name: 0, param: 11 };
 
     let result = manager
-        .call(&id, plugin::Value::Map(map))
+        .call(&id, &value.into())
         .await
         .map_err(|e| newerr!(e))?;
 
     info!("result: {result:?}");
     Ok(())
+}
+
+#[derive(Debug, FromValue)]
+struct Input2 {
+    name: u8,
+    param: u8,
 }

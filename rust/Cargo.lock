@@ -32,7 +32,6 @@ version = "0.1.0"
 dependencies = [
  "libcommon",
  "plugin",
- "plugin-macro",
  "plugin-manager",
  "tokio",
 ]
@@ -198,7 +197,6 @@ dependencies = [
  "async-trait",
  "libcommon",
  "plugin",
- "plugin-macro",
  "serde",
  "serde_json",
 ]
@@ -374,6 +372,7 @@ name = "plugin"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "plugin-macro",
  "value",
 ]
 
@@ -381,7 +380,6 @@ dependencies = [
 name = "plugin-macro"
 version = "0.1.0"
 dependencies = [
- "plugin",
  "proc-macro2",
  "quote",
  "syn",

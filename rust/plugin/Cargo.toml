@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 async-trait = "0.1"
 value = { path = "../value" }
+plugin-macro = { path = "../plugin-macro" }
