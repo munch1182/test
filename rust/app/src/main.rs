@@ -10,7 +10,7 @@ use std::fs;
 #[tokio::main]
 #[logsetup]
 async fn main() -> Result<()> {
-    let mut cmd = Command::from_str("cargo build -p icons");
+    let mut cmd = Command::from_line("cargo build -p icons");
     let result = cmd.output()?;
     info!("{}: {}", cmd.to_string_pretty(), result.status.success());
 

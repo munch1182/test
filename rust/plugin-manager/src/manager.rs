@@ -41,7 +41,7 @@ impl PluginManager {
         let plugin = LoadPlugin::try_from(path)?;
         let info = PluginInfo::try_from(path)?;
         let id = PluginId::from(&info);
-        info!("loaded plugin: {id:?}: ${info:?}");
+        info!("loaded plugin: {id}: {info:?}");
         self.plugins.insert(id, (info, plugin));
         Ok(id)
     }
