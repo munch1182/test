@@ -9,7 +9,9 @@
     "preview": "rsbuild preview"
   },
   "dependencies": {
-    "vue": "^3.5.26"
+    "@remixicon/vue": "^4.9.0",
+    "vue": "^3.5.26",
+    "wujie-vue3": "^1.0.29"
   },
   "devDependencies": {
     "@rsbuild/core": "^1.7.1",

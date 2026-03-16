@@ -1,7 +1,25 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 /* https://tailwindcss.com/docs/theme#theme-variable-namespaces */
 @theme {
-  --spacing-navi: 12rem;
+  --spacing-navi: 10rem;
   --color-navi: #fff;
+  --color-page: var(--color-gray-100);
+  --spacing-header: 3rem;
+  --spacing-logo: 4rem;
+  --spacing-page: 1rem;
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 4px; /* 纵向滚动条宽度 */
+  height: 8px; /* 横向滚动条高度 */
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-200/50; /* 使用 Tailwind 颜色和透明度 */
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-400/30 rounded-full; /* 半透明灰色滑块，圆角 */
 }

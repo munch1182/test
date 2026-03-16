@@ -1,38 +1,45 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import NaviVue from './components/NaviVue.vue';
-import { NavItem } from './types';
+import { onMounted, ref } from "vue";
+import { NavItem } from "./types";
+import NaviVue from "./components/NaviVue.vue";
+import Setting from "./components/SettingVue.vue";
+import WindowHeaderVue from "./components/WindowHeaderVue.vue";
+import type WujieVue from "wujie-vue3";
+import LogoVue from "./components/LogoVue.vue";
+
 const items = ref<NavItem[]>([]);
+const version = ref("0.1.0");
+const page = ref("");
 
 async function loadItems(): Promise<NavItem[]> {
-  return [
-    new NavItem('Home1', 1),
-    new NavItem('Home2', 2),
-  ];
+  return new Array(10).fill(new NavItem("Home1", 1));
 }
 
-onMounted(async () => {
-  items.value = await loadItems();
-});
-
+onMounted(async () => (items.value = await loadItems()));
 </script>
+
 <template>
-  <div class="flex min-h-screen">
-    <nav class="w-navi bg-navi flex flex-col h-screen shadow-md">
-      <header class="p-4 border-b border-gray-200">
-        <div class="text-xl font-bold text-gray-800"> ⚡️ Logo</div>
+  <div class="flex">
+    <aside
+      class="w-navi h-screen bg-navi flex flex-col shadow-md border-r border-gray-200"
+    >
+      <header>
+        <LogoVue />
       </header>
-
-      <div class="flex-1 overflow-y-auto">
+      <nav class="h-screen overflow-y-auto overflow-x-hidden">
         <NaviVue :items="items" />
-      </div>
-
-      <footer class="p-4 border-t border-gray-200 flex items-center justify-between">
-        <span class="text-gray-600 text-sm">v1.0.1</span>
-        <button class="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition" title="设置">
-          ⚙️
-        </button>
+      </nav>
+      <footer>
+        <Setting :version="version" />
       </footer>
-    </nav>
+    </aside>
+    <main class="flex-1 bg-page flex flex-col">
+      <header class="h-header">
+        <WindowHeaderVue />
+      </header>
+      <article>
+        <WujieVue class="w-full h-full flex" v-if="page" :url="page" />
+      </article>
+    </main>
   </div>
 </template>

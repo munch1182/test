@@ -8,9 +8,15 @@ importers:
 
   .:
     dependencies:
+      '@remixicon/vue':
+        specifier: ^4.9.0
+        version: 4.9.0(vue@3.5.30(typescript@5.9.3))
       vue:
         specifier: ^3.5.26
         version: 3.5.30(typescript@5.9.3)
+      wujie-vue3:
+        specifier: ^1.0.29
+        version: 1.0.29(vue@3.5.30(typescript@5.9.3))
     devDependencies:
       '@rsbuild/core':
         specifier: ^1.7.1
@@ -46,6 +52,10 @@ packages:
     resolution: {integrity: sha512-IyDgFV5GeDUVX4YdF/3CPULtVGSXXMLh1xVIgdCgxApktqnQV0r7/8Nqthg+8YLGaAtdyIlo2qIdZrbCv4+7ww==}
     engines: {node: '>=6.0.0'}
     hasBin: true
+
+  '@babel/runtime@7.28.6':
+    resolution: {integrity: sha512-05WQkdpL9COIMz4LjTxGpPNCdlpyimKppYNoJ5Di5EUObifl8t4tuLuUBBZEpoLYOmfvIWrsp9fCl0HoPRVTdA==}
+    engines: {node: '>=6.9.0'}
 
   '@babel/types@7.29.0':
     resolution: {integrity: sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==}
@@ -96,6 +106,11 @@ packages:
 
   '@napi-rs/wasm-runtime@1.0.7':
     resolution: {integrity: sha512-SeDnOO0Tk7Okiq6DbXmmBODgOAb9dp9gjlphokTUxmt8U3liIP1ZsozBahH69j/RJv+Rfs6IwUKHTgQYJ/HBAw==}
+
+  '@remixicon/vue@4.9.0':
+    resolution: {integrity: sha512-4P0MY5ScL+MRLnHu1iT3xHAsliBwOGDIgSgHCZhSj2wkLa5NzqiQ4SGD/04VoHM+BRr8+xjmF7ZemkOUlMDJ3A==}
+    peerDependencies:
+      vue: '>= 3'
 
   '@rsbuild/core@1.7.3':
     resolution: {integrity: sha512-kI1oQvCXbQYxUvQPnDLdjSX4gFsbrFNpuUj6jXEJ7IcJ74Q+n4oeFj74/8tKerhxhe0L90m/ZQfzLeN5ORGA9w==}
@@ -486,6 +501,14 @@ packages:
       typescript:
         optional: true
 
+  wujie-vue3@1.0.29:
+    resolution: {integrity: sha512-OGt5Veyq/DtmFzHQCANmv8nZgu877u7ZjS5qjFpSrtKARKhLjID3x99D40a4pb3Kj5UmRatkV5Gn5hqOWpziZQ==}
+    peerDependencies:
+      vue: ^3.0.0
+
+  wujie@1.0.29:
+    resolution: {integrity: sha512-u7PmBT4l5ov7ciwmZNG8DLIRKrYrnXDa0LnAFgRQikJ/ZrVZYzzSNz6duzEJoj8/o46dnMy/g9Hh/PBYGbgFUw==}
+
 snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
@@ -497,6 +520,8 @@ snapshots:
   '@babel/parser@7.29.0':
     dependencies:
       '@babel/types': 7.29.0
+
+  '@babel/runtime@7.28.6': {}
 
   '@babel/types@7.29.0':
     dependencies:
@@ -569,6 +594,10 @@ snapshots:
       '@emnapi/runtime': 1.9.0
       '@tybys/wasm-util': 0.10.1
     optional: true
+
+  '@remixicon/vue@4.9.0(vue@3.5.30(typescript@5.9.3))':
+    dependencies:
+      vue: 3.5.30(typescript@5.9.3)
 
   '@rsbuild/core@1.7.3':
     dependencies:
@@ -905,3 +934,12 @@ snapshots:
       '@vue/shared': 3.5.30
     optionalDependencies:
       typescript: 5.9.3
+
+  wujie-vue3@1.0.29(vue@3.5.30(typescript@5.9.3)):
+    dependencies:
+      vue: 3.5.30(typescript@5.9.3)
+      wujie: 1.0.29
+
+  wujie@1.0.29:
+    dependencies:
+      '@babel/runtime': 7.28.6
