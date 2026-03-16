@@ -1,0 +1,7 @@
+@import 'tailwindcss';
+
+/* https://tailwindcss.com/docs/theme#theme-variable-namespaces */
+@theme {
+  --spacing-navi: 12rem;
+  --color-navi: #fff;
+}
