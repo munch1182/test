@@ -6,12 +6,12 @@ const props = defineProps<{ items: NavItem[] }>();
 
 <template>
   <ul
-    class="w-navi bg-navi py-2 list-none flex-1 overflow-y-auto overflow-x-hidden"
+    class="w-navi bg-navi flex-1 list-none overflow-x-hidden overflow-y-auto py-2"
   >
     <li v-for="navi in props.items" :key="navi.id">
       <router-link
         :to="navi.url"
-        class="block py-3 pl-page hover:bg-gray-200 transition w-full"
+        class="pl-page block w-full py-3 transition hover:bg-gray-200"
         active-class="bg-blue-500 text-white"
       >
         {{ navi.name }}

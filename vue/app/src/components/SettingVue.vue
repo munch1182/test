@@ -5,14 +5,14 @@ const prop = defineProps({ version: String });
 
 <template>
   <div
-    class="h-header p-4 border-t border-gray-200 flex items-center justify-between"
+    class="h-header flex items-center justify-between border-t border-gray-200 p-4"
   >
-    <span class="text-gray-500 text-sm">{{ prop.version }}</span>
+    <span class="text-sm text-gray-500">{{ prop.version }}</span>
     <button
-      class="bg-gray-100 hover:bg-gray-200 rounded-full transition"
+      class="rounded-full bg-gray-100 transition hover:bg-gray-200"
       title="设置"
     >
-      <RiSettings2Fill class="text-gray-500 text-sm" />
+      <RiSettings2Fill class="text-sm text-gray-500" />
     </button>
   </div>
 </template>

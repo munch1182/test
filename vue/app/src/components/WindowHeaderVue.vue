@@ -5,15 +5,15 @@ import { RiSubtractLine, RiCloseLine } from "@remixicon/vue";
 
 <template>
   <div
-    class="h-full flex items-center justify-end px-4 border-b border-gray-200 bg-white"
+    class="flex h-full items-center justify-end border-b border-gray-200 bg-white px-4"
   >
     <button
-      class="w-8 h-8 flex items-center justify-center hover:bg-gray-200 rounded-full text-gray-600"
+      class="flex h-8 w-8 items-center justify-center rounded-full text-gray-600 hover:bg-gray-200"
     >
       <RiSubtractLine size="20" />
     </button>
     <button
-      class="w-8 h-8 flex items-center justify-center hover:bg-red-100 hover:text-red-600 rounded-full text-gray-600"
+      class="flex h-8 w-8 items-center justify-center rounded-full text-gray-600 hover:bg-red-100 hover:text-red-600"
     >
       <RiCloseLine size="20" />
     </button>

@@ -13,7 +13,7 @@ onMounted(() => {
 
 <template>
   <div
-    class="text-xl font-bold flex flex-wrap gap-4 items-center text-gray-800 p-4"
+    class="flex flex-wrap items-center gap-4 p-4 text-xl font-bold text-gray-800"
   >
     <RiCodeLine size="32" :color="color" />
     <span class="text-2xl">START</span>

@@ -26,7 +26,7 @@ onMounted(async () => (items.value = await loadItems()));
       <header>
         <LogoVue />
       </header>
-      <nav class="h-screen overflow-y-auto overflow-x-hidden">
+      <nav class="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
         <NaviVue :items="items" />
       </nav>
       <footer>
