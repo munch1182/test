@@ -9,11 +9,13 @@ import { RiSubtractLine, RiCloseLine } from "@remixicon/vue";
   >
     <button
       class="flex h-8 w-8 items-center justify-center rounded-full text-gray-600 hover:bg-gray-200"
+      data-command="minimize"
     >
       <RiSubtractLine size="20" />
     </button>
     <button
       class="flex h-8 w-8 items-center justify-center rounded-full text-gray-600 hover:bg-red-100 hover:text-red-600"
+      data-command="close"
     >
       <RiCloseLine size="20" />
     </button>

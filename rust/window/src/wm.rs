@@ -1,6 +1,7 @@
-use crate::{UserEvent, script::setup_script};
+use crate::{MessageWithId, SysWindowEvent, UserEvent, script::setup_script};
 use dashmap::DashMap;
 use libcommon::prelude::*;
+use message::Message;
 use tao::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop, EventLoopBuilder},
@@ -11,6 +12,7 @@ use wry::{WebView as WryWebview, WebViewBuilder};
 pub struct WindowManager {
     event: EventLoop<UserEvent>,
     windows: DashMap<WindowId, Window>,
+    // curr: Cell<Option<WindowId>>,
 }
 
 impl Default for WindowManager {
@@ -31,15 +33,51 @@ impl WindowManager {
     }
 
     pub fn run(self) -> ! {
-        self.event.run(move |event, _, flow| {
+        let event = self.event;
+        event.run(move |event, _, flow| {
             *flow = ControlFlow::Wait;
 
             match event {
                 Event::WindowEvent {
-                    event: WindowEvent::CloseRequested,
-                    ..
-                } => {
-                    *flow = ControlFlow::Exit;
+                    window_id, event, ..
+                } => match event {
+                    WindowEvent::CloseRequested => {
+                        debug!("rece {window_id:?} WindowEvent::CloseRequested; cloe window");
+                    }
+                    WindowEvent::Focused(_gained) => {
+                        // debug!("rece {window_id:?} WindowEvent::Focused({gained})");
+                    }
+                    _ => {}
+                },
+                Event::UserEvent(UserEvent::IpcHandle(msg)) => {
+                    let id = msg.id;
+                    let cmd = msg.cmd;
+                    if let Ok(sys) = SysWindowEvent::try_from(cmd) {
+                        match sys {
+                            SysWindowEvent::DragStart => {
+                                if let Some(win) = self.windows.get(&id) {
+                                    let drag = win.window.drag_window();
+                                    debug!("start drag window({id:?}): {}", drag.is_ok());
+                                }
+                            }
+                            SysWindowEvent::Close => {
+                                if let Some(remove) = self.windows.remove(&id) {
+                                    drop(remove);
+                                    debug!("close window({id:?})");
+                                }
+                                if self.windows.is_empty() {
+                                    info!("all windows closed, exit");
+                                    *flow = ControlFlow::Exit;
+                                }
+                            }
+                            SysWindowEvent::Minimize => {
+                                if let Some(win) = self.windows.get(&id) {
+                                    win.window.set_minimized(true);
+                                    debug!("minimize window({id:?})");
+                                }
+                            }
+                        }
+                    }
                 }
                 _ => {}
             }
@@ -49,7 +87,8 @@ impl WindowManager {
 
 struct Window {
     window: TaoWindow,
-    _webview: WryWebview,
+    #[allow(unused)]
+    webview: WryWebview,
 }
 
 impl Window {
@@ -66,12 +105,27 @@ impl Window {
         WIN: FnOnce(WindowBuilder) -> WindowBuilder,
         WEB: FnOnce(WebViewBuilder) -> WebViewBuilder,
     {
+        let proxy = event.create_proxy();
         let window = win(WindowBuilder::new()).build(event)?;
-        let _webview = web(WebViewBuilder::new()
+        let id = window.id();
+        let webview = web(WebViewBuilder::new()
             .with_initialization_script(setup_script())
-            .with_ipc_handler(|a| debug!("rece ipc: {a:?}")))
+            .with_ipc_handler(move |req| {
+                let str = req.body().to_string();
+                match Message::try_from(str) {
+                    Ok(msg) => {
+                        if proxy
+                            .send_event(UserEvent::IpcHandle(MessageWithId::new(id, msg)))
+                            .is_err()
+                        {
+                            warn!("ipc message send error");
+                        }
+                    }
+                    std::result::Result::Err(_) => warn!("ipc message parse Message error"),
+                }
+            }))
         .build(&window)?;
-        Ok(Self { window, _webview })
+        Ok(Self { window, webview })
     }
 
     fn id(&self) -> WindowId {

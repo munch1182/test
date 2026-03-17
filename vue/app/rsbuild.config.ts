@@ -11,4 +11,7 @@ export default defineConfig({
   html: {
     title: "START",
   },
+  source: {
+    preEntry: ["./src/global.ts"],
+  }
 });

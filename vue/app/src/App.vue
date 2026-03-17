@@ -34,7 +34,7 @@ onMounted(async () => (items.value = await loadItems()));
       </footer>
     </aside>
     <main class="bg-page flex flex-1 flex-col">
-      <header class="h-header" decoration>
+      <header class="h-header" data-decoration>
         <WindowHeaderVue />
       </header>
       <article>

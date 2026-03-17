@@ -1,3 +1,4 @@
+mod cmd;
 mod event;
 mod script;
 mod wm;

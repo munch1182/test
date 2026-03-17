@@ -1302,6 +1302,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "message"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "libcommon",
+]
+
+[[package]]
 name = "mio"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2554,6 +2562,7 @@ version = "0.1.0"
 dependencies = [
  "dashmap",
  "libcommon",
+ "message",
  "tao",
  "tokio",
  "wry",

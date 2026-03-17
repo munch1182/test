@@ -3,8 +3,7 @@ import type { NavItem } from "../types";
 const props = defineProps<{ items: NavItem[] }>();
 
 async function select(navi: NavItem) {
-  console.log(navi.id);
-  window.ipc.postMessage(navi.id + "," + navi.name);
+   window.ipc.postMessage("select" + navi.id);
 }
 </script>
 
