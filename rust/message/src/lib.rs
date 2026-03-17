@@ -6,6 +6,15 @@ pub struct Message {
     pub payload: Vec<u8>,
 }
 
+impl Message {
+    pub fn new(command: impl ToString, payload: impl ToString) -> Self {
+        Self {
+            command: command.to_string(),
+            payload: BASE64_STANDARD.encode(payload.to_string()).into(),
+        }
+    }
+}
+
 impl From<Message> for String {
     fn from(value: Message) -> Self {
         let mut s = String::new();
@@ -16,15 +25,19 @@ impl From<Message> for String {
     }
 }
 
-impl TryFrom<String> for Message {
+impl TryFrom<&str> for Message {
     type Error = libcommon::prelude::Err;
-    fn try_from(value: String) -> Result<Self, Self::Error> {
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         let value = value.split("|").collect::<Vec<&str>>();
         if value.len() != 2 {
             return Err(newerr!("invalid message format"));
         }
         let command = value[0].trim().to_string();
-        let payload = BASE64_STANDARD.decode(value[1].trim())?;
+        let payload = if value[1].is_empty() {
+            vec![]
+        } else {
+            BASE64_STANDARD.decode(value[1].trim())?
+        };
         Ok(Self { command, payload })
     }
 }
@@ -43,7 +56,7 @@ mod tests {
         let s = String::from(msg);
         assert_eq!(s, "test|T2s=");
 
-        let msg: Result<Message, _> = s.try_into();
+        let msg: Result<Message, _> = s.as_str().try_into();
         assert!(msg.is_ok());
     }
 }

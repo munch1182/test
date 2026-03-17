@@ -2,17 +2,31 @@ use libcommon::newerr;
 use message::Message;
 use tao::window::WindowId;
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub enum UserEvent {
     #[default]
     Empty,
     IpcHandle(MessageWithId),
+    RespHandle(MessageWithId),
 }
+
+unsafe impl Send for UserEvent {}
 
 pub struct MessageWithId {
     pub id: WindowId,
     pub cmd: String,
     pub payload: Vec<u8>,
+}
+
+unsafe impl Send for MessageWithId {}
+
+impl From<MessageWithId> for Message {
+    fn from(value: MessageWithId) -> Self {
+        Self {
+            command: value.cmd,
+            payload: value.payload,
+        }
+    }
 }
 
 impl std::fmt::Debug for MessageWithId {
@@ -42,11 +56,11 @@ pub enum SysWindowEvent {
     Minimize,
 }
 
-impl TryFrom<String> for SysWindowEvent {
+impl TryFrom<&str> for SysWindowEvent {
     type Error = libcommon::prelude::Err;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        match value.as_str() {
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
             "DragStart" => Ok(Self::DragStart),
             "Close" => Ok(Self::Close),
             "Minimize" => Ok(Self::Minimize),

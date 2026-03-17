@@ -16,6 +16,10 @@ async function loadItems(): Promise<NavItem[]> {
 }
 
 onMounted(async () => (items.value = await loadItems()));
+
+async function call() {
+  window.ipc.postMessage("call1|");
+}
 </script>
 
 <template>
@@ -38,6 +42,7 @@ onMounted(async () => (items.value = await loadItems()));
         <WindowHeaderVue />
       </header>
       <article>
+        <button @click="call">123123</button>
         <WujieVue class="flex h-full w-full" v-if="page" :url="page" />
       </article>
     </main>

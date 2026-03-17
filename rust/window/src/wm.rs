@@ -1,7 +1,12 @@
-use crate::{MessageWithId, SysWindowEvent, UserEvent, script::setup_script};
+use crate::{
+    MessageWithId, SysWindowEvent, UserEvent,
+    cmd::{CommandHander, CommandResp},
+    script::setup_script,
+};
 use dashmap::DashMap;
 use libcommon::prelude::*;
 use message::Message;
+use std::{pin::Pin, sync::Arc};
 use tao::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop, EventLoopBuilder},
@@ -12,7 +17,7 @@ use wry::{WebView as WryWebview, WebViewBuilder};
 pub struct WindowManager {
     event: EventLoop<UserEvent>,
     windows: DashMap<WindowId, Window>,
-    // curr: Cell<Option<WindowId>>,
+    handlers: Arc<CommandHander>,
 }
 
 impl Default for WindowManager {
@@ -20,6 +25,7 @@ impl Default for WindowManager {
         Self {
             event: EventLoopBuilder::with_user_event().build(),
             windows: Default::default(),
+            handlers: Default::default(),
         }
     }
 }
@@ -32,9 +38,22 @@ impl WindowManager {
         Ok(id)
     }
 
+    pub fn reigster<I, F>(&self, handlers: I)
+    where
+        I: IntoIterator<Item = (String, F)>,
+        F: Fn(MessageWithId) -> Pin<Box<dyn Future<Output = Message> + Send + 'static>>
+            + Send
+            + Sync
+            + 'static,
+    {
+        for (name, ele) in handlers {
+            self.handlers.register(name, Box::new(ele));
+        }
+    }
+
     pub fn run(self) -> ! {
-        let event = self.event;
-        event.run(move |event, _, flow| {
+        let proxy = Arc::new(self.event.create_proxy());
+        self.event.run(move |event, _, flow| {
             *flow = ControlFlow::Wait;
 
             match event {
@@ -49,36 +68,54 @@ impl WindowManager {
                     }
                     _ => {}
                 },
-                Event::UserEvent(UserEvent::IpcHandle(msg)) => {
-                    let id = msg.id;
-                    let cmd = msg.cmd;
-                    if let Ok(sys) = SysWindowEvent::try_from(cmd) {
-                        match sys {
-                            SysWindowEvent::DragStart => {
-                                if let Some(win) = self.windows.get(&id) {
-                                    let drag = win.window.drag_window();
-                                    debug!("start drag window({id:?}): {}", drag.is_ok());
+                Event::UserEvent(event) => match event {
+                    UserEvent::Empty => {}
+                    UserEvent::IpcHandle(msg) => {
+                        let id = &msg.id;
+                        if let Ok(sys) = SysWindowEvent::try_from(msg.cmd.as_str()) {
+                            match sys {
+                                SysWindowEvent::DragStart => {
+                                    if let Some(win) = self.windows.get(id) {
+                                        let drag = win.window.drag_window();
+                                        debug!("start drag window({id:?}): {}", drag.is_ok());
+                                    }
+                                }
+                                SysWindowEvent::Close => {
+                                    if let Some(remove) = self.windows.remove(id) {
+                                        drop(remove);
+                                        debug!("close window({id:?})");
+                                    }
+                                    if self.windows.is_empty() {
+                                        info!("all windows closed, exit");
+                                        *flow = ControlFlow::Exit;
+                                    }
+                                }
+                                SysWindowEvent::Minimize => {
+                                    if let Some(win) = self.windows.get(id) {
+                                        win.window.set_minimized(true);
+                                        debug!("minimize window({id:?})");
+                                    }
                                 }
                             }
-                            SysWindowEvent::Close => {
-                                if let Some(remove) = self.windows.remove(&id) {
-                                    drop(remove);
-                                    debug!("close window({id:?})");
-                                }
-                                if self.windows.is_empty() {
-                                    info!("all windows closed, exit");
-                                    *flow = ControlFlow::Exit;
-                                }
-                            }
-                            SysWindowEvent::Minimize => {
-                                if let Some(win) = self.windows.get(&id) {
-                                    win.window.set_minimized(true);
-                                    debug!("minimize window({id:?})");
-                                }
+                        } else {
+                            let handlers = self.handlers.clone();
+                            let proxy = proxy.clone();
+                            let id = msg.id;
+                            tokio::spawn(async move {
+                                let result = MessageWithId::new(id, handlers.call(msg).await);
+                                let _ = proxy.send_event(UserEvent::RespHandle(result));
+                            });
+                        }
+                    }
+                    UserEvent::RespHandle(msg) => {
+                        if let Some(win) = self.windows.get(&msg.id) {
+                            let resp = CommandResp::new(&win.webview);
+                            if resp.resp(msg.into()).is_err() {
+                                warn!("resp message error");
                             }
                         }
                     }
-                }
+                },
                 _ => {}
             }
         })
@@ -112,7 +149,7 @@ impl Window {
             .with_initialization_script(setup_script())
             .with_ipc_handler(move |req| {
                 let str = req.body().to_string();
-                match Message::try_from(str) {
+                match Message::try_from(str.as_str()) {
                     Ok(msg) => {
                         if proxy
                             .send_event(UserEvent::IpcHandle(MessageWithId::new(id, msg)))
@@ -121,7 +158,7 @@ impl Window {
                             warn!("ipc message send error");
                         }
                     }
-                    std::result::Result::Err(_) => warn!("ipc message parse Message error"),
+                    std::result::Result::Err(e) => warn!("ipc message parse error: {str}: ${e:?}"),
                 }
             }))
         .build(&window)?;
