@@ -5,6 +5,6 @@ members = [
     "plugin-manager",
     "plugins/icons",
     "value",
-    "app",
+    "app", "window",
 ]
 resolver = "3"

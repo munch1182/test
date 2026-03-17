@@ -12,7 +12,7 @@ const version = ref("0.1.0");
 const page = ref("");
 
 async function loadItems(): Promise<NavItem[]> {
-  return new Array(10).fill(new NavItem("Home1", 1));
+  return new Array(3).fill(new NavItem("Home1", 1));
 }
 
 onMounted(async () => (items.value = await loadItems()));
@@ -21,24 +21,24 @@ onMounted(async () => (items.value = await loadItems()));
 <template>
   <div class="flex">
     <aside
-      class="w-navi h-screen bg-navi flex flex-col shadow-md border-r border-gray-200"
+      class="w-navi bg-navi flex h-screen flex-col border-r border-gray-200 shadow-md"
     >
       <header>
         <LogoVue />
       </header>
-      <nav class="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+      <nav class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
         <NaviVue :items="items" />
       </nav>
       <footer>
         <Setting :version="version" />
       </footer>
     </aside>
-    <main class="flex-1 bg-page flex flex-col">
-      <header class="h-header">
+    <main class="bg-page flex flex-1 flex-col">
+      <header class="h-header" decoration>
         <WindowHeaderVue />
       </header>
       <article>
-        <WujieVue class="w-full h-full flex" v-if="page" :url="page" />
+        <WujieVue class="flex h-full w-full" v-if="page" :url="page" />
       </article>
     </main>
   </div>
