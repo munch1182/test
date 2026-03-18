@@ -21,3 +21,5 @@ venv/
 .env
 
 test**
+
+/vue/app/src/generate/

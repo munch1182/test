@@ -13,3 +13,8 @@ tokio = { version = "1", features = ["full"] }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+
+[build-dependencies]
+window-generate = { path = "../window/window-generate" }
+glob = "0.3"

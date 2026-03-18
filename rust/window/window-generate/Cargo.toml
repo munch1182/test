@@ -1,0 +1,12 @@
+[package]
+name = "window-generate"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "2.0", features = ["full", "extra-traits", "visit"] }
+convert_case = "0.11"
+
+libcommon = { git = "https://github.com/munch1182/p2.git", branch = "master", package = "libcommon" }

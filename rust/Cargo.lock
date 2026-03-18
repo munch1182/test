@@ -30,6 +30,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 name = "app"
 version = "0.1.0"
 dependencies = [
+ "glob",
  "libcommon",
  "plugin",
  "plugin-manager",
@@ -37,6 +38,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "window",
+ "window-generate",
 ]
 
 [[package]]
@@ -229,6 +231,15 @@ checksum = "ba5a308b75df32fe02788e748662718f03fde005016435c444eea572398219fd"
 dependencies = [
  "bytes",
  "memchr",
+]
+
+[[package]]
+name = "convert_case"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "affbf0190ed2caf063e3def54ff444b449371d55c58e513a95ab98eca50adb49"
+dependencies = [
+ "unicode-segmentation",
 ]
 
 [[package]]
@@ -851,6 +862,12 @@ dependencies = [
  "libc",
  "system-deps",
 ]
+
+[[package]]
+name = "glob"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
 name = "gobject-sys"
@@ -2570,6 +2587,17 @@ dependencies = [
  "tokio",
  "window-macro",
  "wry",
+]
+
+[[package]]
+name = "window-generate"
+version = "0.1.0"
+dependencies = [
+ "convert_case",
+ "libcommon",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
 ]
 
 [[package]]

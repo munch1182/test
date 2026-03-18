@@ -6,6 +6,7 @@ import Setting from "./components/SettingVue.vue";
 import WindowHeaderVue from "./components/WindowHeaderVue.vue";
 import type WujieVue from "wujie-vue3";
 import LogoVue from "./components/LogoVue.vue";
+import { commands } from "./generate/bridge";
 
 const items = ref<NavItem[]>([]);
 const version = ref("0.1.0");
@@ -18,8 +19,8 @@ async function loadItems(): Promise<NavItem[]> {
 onMounted(async () => (items.value = await loadItems()));
 
 async function call() {
-  const v = await window.bridge.send("aaa", { name: "zs", age: 1 });
-  console.log(v);
+  const result = await commands.aaa({ name: "zs", age:1 });
+  console.log(result);
 }
 </script>
 

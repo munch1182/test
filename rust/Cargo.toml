@@ -8,5 +8,5 @@ members = [
     "plugin/value",
     "app",
     "window/window",
-    "window/window-macro",
+    "window/window-macro", "window/window-generate",
 ]

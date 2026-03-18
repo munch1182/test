@@ -7,17 +7,19 @@ use window::{WindowManager, generate};
 async fn main() -> libcommon::prelude::Result<()> {
     let wm = WindowManager::default();
     wm.create_window("Start", "http://localhost:3000/app/")?;
-    wm.reigster(generate!(aaa, bbb));
+    wm.reigster(generate!(aaa, bbb, ccc));
     wm.run()
 }
 
+#[allow(unused)]
 #[window::bridge]
-pub fn aaa(name: String, age: u32) -> serde_json::Value {
-    json!({
-        "name": name,
-        "age": age+1
-    })
+pub fn aaa(name: String, age: u32) -> u32 {
+    age + 1
 }
+
+#[allow(unused)]
+#[window::bridge]
+pub fn ccc(name: String, age: u32) {}
 
 #[window::bridge]
 pub fn bbb() -> serde_json::Value {
