@@ -1,8 +1,9 @@
 mod cmd;
 mod event;
+mod macros;
 mod script;
 mod wm;
 
-pub use event::*;
-pub use message::*;
+pub(crate) use event::*;
+pub use macros::*;
 pub use wm::*;

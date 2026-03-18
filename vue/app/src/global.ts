@@ -1,7 +1,7 @@
 declare global {
   interface Window {
-    ipc: {
-      postMessage<P, R>(channel: P): R | undefined;
+    bridge: {
+      send<T>(command: string, payload: any | undefined): Promise<T>;
     };
   }
 }

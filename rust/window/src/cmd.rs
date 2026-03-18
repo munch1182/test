@@ -1,11 +1,9 @@
-use crate::MessageWithId;
+use crate::{IpcReqWithId, IpcResponse, Message, script::bridge_handler_call};
 use dashmap::DashMap;
-use message::Message;
+use libcommon::{newerr, prelude::Result};
 use std::pin::Pin;
-use wry::WebView;
-
 pub type CommandFn =
-    Box<dyn Fn(MessageWithId) -> Pin<Box<dyn Future<Output = Message> + Send>> + Send + Sync>;
+    Box<dyn Fn(Message) -> Pin<Box<dyn Future<Output = Result<Message>> + Send>> + Send + Sync>;
 
 #[derive(Default)]
 pub(crate) struct CommandHander {
@@ -17,27 +15,26 @@ impl CommandHander {
         self.handers.insert(key.into(), handler);
     }
 
-    pub async fn call(&self, msg: MessageWithId) -> Message {
-        let cmd = msg.cmd.clone();
-        if let Some(fun) = self.handers.get(&msg.cmd) {
-            return fun(msg).await;
+    pub async fn call(&self, msg: IpcReqWithId) -> Result<IpcResponse> {
+        let cmd = &msg.req.command;
+        match self.handers.get(cmd) {
+            Some(fun) => {
+                let payload = fun(msg.req.payload).await?;
+                Ok(IpcResponse::from(msg.req.id, payload))
+            }
+            None => Err(newerr!("not found cmd: {cmd}")),
         }
-        Message::new(cmd, "error")
     }
 }
 
-pub(crate) struct CommandResp<'a> {
-    webview: &'a WebView,
-}
-
-impl<'a> CommandResp<'a> {
-    pub fn new(webview: &'a WebView) -> Self {
-        Self { webview }
-    }
-
-    pub fn resp(&self, msg: Message) -> std::result::Result<(), wry::Error> {
-        let str: String = msg.into();
-        self.webview
-            .evaluate_script(format!("window.resp({str});").as_str())
-    }
+///
+/// 回复消息给前端
+///
+/// msg 的消息id要与发送的消息id对应
+///
+/// script要与注入的代码对应 [`crate::script::setup_script`]
+pub fn resp2web(webview: &wry::WebView, msg: &IpcResponse) -> Result<()> {
+    let json_str = serde_json::to_string(msg).map_err(|e| newerr!(e))?;
+    webview.evaluate_script(&bridge_handler_call(&json_str))?;
+    Ok(())
 }

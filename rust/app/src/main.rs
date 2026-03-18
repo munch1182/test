@@ -1,7 +1,7 @@
 use std::pin::Pin;
 
 use libcommon::prelude::*;
-use window::{Message, MessageWithId, WindowManager};
+use window::WindowManager;
 
 #[tokio::main]
 #[logsetup]
@@ -13,7 +13,9 @@ async fn main() -> Result<()> {
 }
 
 // todo
-pub fn call1(msg: MessageWithId) -> Pin<Box<dyn Future<Output = Message> + Send>> {
+pub fn call1(
+    msg: serde_json::Value,
+) -> Pin<Box<dyn Future<Output = Result<serde_json::Value>> + Send>> {
     debug!("call1: {:?}", msg);
-    Box::pin(async { Message::new("rece", "call12") })
+    Box::pin(async { Ok(serde_json::json!(2)) })
 }

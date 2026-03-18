@@ -7,6 +7,5 @@ members = [
     "plugins/icons",
     "value",
     "app",
-    "window", 
-    "message",
+    "window"
 ]

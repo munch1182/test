@@ -18,7 +18,8 @@ async function loadItems(): Promise<NavItem[]> {
 onMounted(async () => (items.value = await loadItems()));
 
 async function call() {
-  window.ipc.postMessage("call1|");
+  const v = await window.bridge.send("call1", 1);
+  console.log(v);
 }
 </script>
 

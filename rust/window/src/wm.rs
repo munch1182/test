@@ -1,15 +1,14 @@
 use crate::{
-    MessageWithId, SysWindowEvent, UserEvent,
-    cmd::{CommandHander, CommandResp},
+    IpcReqWithId, IpcRequest, IpcResponse, Message, SysWindowEvent, UserEvent,
+    cmd::{CommandHander, resp2web},
     script::setup_script,
 };
 use dashmap::DashMap;
 use libcommon::prelude::*;
-use message::Message;
 use std::{pin::Pin, sync::Arc};
 use tao::{
     event::{Event, WindowEvent},
-    event_loop::{ControlFlow, EventLoop, EventLoopBuilder},
+    event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopProxy},
     window::{Window as TaoWindow, WindowBuilder, WindowId},
 };
 use wry::{WebView as WryWebview, WebViewBuilder};
@@ -38,10 +37,26 @@ impl WindowManager {
         Ok(id)
     }
 
+    pub(crate) fn send_event(proxy: &EventLoopProxy<UserEvent>, event: UserEvent) {
+        if proxy.send_event(event).is_err() {
+            warn!("failed to send event, the event loop has been destroyed");
+        }
+    }
+
+    ///
+    /// 注册事件处理函数
+    ///
+    ///
+    /// 通过[`wry::WebViewBuilder::with_ipc_handler`]接受前端通过`window.ipc.postMessage`发送的消息(该命令由wry注入);
+    /// 并将该消息[`String`]格式化为固定格式[`crate::IpcRequest`], 并通过其参数`command`分发到对应的处理函数;
+    /// 这个格式由[`crate::script`]注入, `command`参数即调用者使用宏注册的方法名;
+    /// 调用该方法得到结果, 并通过[`resp2web`]回复给前端(附上前端发送的`id`参数), 这个回复方法也由[`crate::script`]注入;
+    ///
+    ///
     pub fn reigster<I, F>(&self, handlers: I)
     where
         I: IntoIterator<Item = (String, F)>,
-        F: Fn(MessageWithId) -> Pin<Box<dyn Future<Output = Message> + Send + 'static>>
+        F: Fn(Message) -> Pin<Box<dyn Future<Output = Result<Message>> + Send + 'static>>
             + Send
             + Sync
             + 'static,
@@ -72,7 +87,7 @@ impl WindowManager {
                     UserEvent::Empty => {}
                     UserEvent::IpcHandle(msg) => {
                         let id = &msg.id;
-                        if let Ok(sys) = SysWindowEvent::try_from(msg.cmd.as_str()) {
+                        if let Ok(sys) = SysWindowEvent::try_from(msg.req.command.as_str()) {
                             match sys {
                                 SysWindowEvent::DragStart => {
                                     if let Some(win) = self.windows.get(id) {
@@ -100,20 +115,27 @@ impl WindowManager {
                         } else {
                             let handlers = self.handlers.clone();
                             let proxy = proxy.clone();
-                            let id = msg.id;
+                            let windowid = msg.id;
+                            let msgid = msg.req.id;
                             tokio::spawn(async move {
-                                let result = MessageWithId::new(id, handlers.call(msg).await);
-                                let _ = proxy.send_event(UserEvent::RespHandle(result));
+                                let resp = match handlers.call(msg).await {
+                                    Ok(resp) => resp,
+                                    std::result::Result::Err(e) => IpcResponse::from(
+                                        msgid,
+                                        serde_json::json!({"error": e.to_string()}),
+                                    ),
+                                };
+                                Self::send_event(&proxy, UserEvent::RespHandle(windowid, resp));
                             });
                         }
                     }
-                    UserEvent::RespHandle(msg) => {
-                        if let Some(win) = self.windows.get(&msg.id) {
-                            let resp = CommandResp::new(&win.webview);
-                            if resp.resp(msg.into()).is_err() {
-                                warn!("resp message error");
-                            }
+                    UserEvent::RespHandle(id, resp) => {
+                        if let Some(win) = self.windows.get(&id)
+                            && resp2web(&win.webview, &resp).is_ok()
+                        {
+                            return;
                         }
+                        warn!("failed to send response to webview({id:?})");
                     }
                 },
                 _ => {}
@@ -149,15 +171,11 @@ impl Window {
             .with_initialization_script(setup_script())
             .with_ipc_handler(move |req| {
                 let str = req.body().to_string();
-                match Message::try_from(str.as_str()) {
-                    Ok(msg) => {
-                        if proxy
-                            .send_event(UserEvent::IpcHandle(MessageWithId::new(id, msg)))
-                            .is_err()
-                        {
-                            warn!("ipc message send error");
-                        }
-                    }
+                match IpcRequest::try_from(str.as_str()) {
+                    Ok(msg) => WindowManager::send_event(
+                        &proxy,
+                        UserEvent::IpcHandle(IpcReqWithId::new(id, msg)),
+                    ),
                     std::result::Result::Err(e) => warn!("ipc message parse error: {str}: ${e:?}"),
                 }
             }))
