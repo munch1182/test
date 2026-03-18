@@ -1,6 +1,6 @@
 use crate::{
     IpcReqWithId, IpcRequest, IpcResponse, Message, SysWindowEvent, UserEvent,
-    cmd::{CommandHander, resp2web},
+    cmd::{CommandHander, Error, resp2web},
     script::setup_script,
 };
 use dashmap::DashMap;
@@ -52,12 +52,16 @@ impl WindowManager {
     /// 这个格式由[`crate::script`]注入, `command`参数即调用者使用宏注册的方法名;
     /// 调用该方法得到结果, 并通过[`resp2web`]回复给前端(附上前端发送的`id`参数), 这个回复方法也由[`crate::script`]注入;
     ///
+    /// todo: 支持传入AppState
     ///
     pub fn reigster<I, F>(&self, handlers: I)
     where
         I: IntoIterator<Item = (String, F)>,
-        F: Fn(Message) -> Pin<Box<dyn Future<Output = Result<Message>> + Send + 'static>>
-            + Send
+        F: Fn(
+                Message,
+            ) -> Pin<
+                Box<dyn Future<Output = std::result::Result<Message, Error>> + Send + 'static>,
+            > + Send
             + Sync
             + 'static,
     {
@@ -67,6 +71,7 @@ impl WindowManager {
     }
 
     pub fn run(self) -> ! {
+        info!("start event loop");
         let proxy = Arc::new(self.event.create_proxy());
         self.event.run(move |event, _, flow| {
             *flow = ControlFlow::Wait;

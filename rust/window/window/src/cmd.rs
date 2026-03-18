@@ -1,9 +1,18 @@
 use crate::{IpcReqWithId, IpcResponse, Message, script::bridge_handler_call};
 use dashmap::DashMap;
-use libcommon::{newerr, prelude::Result};
+use libcommon::{
+    newerr,
+    prelude::{ErrMapperExt, Result},
+};
 use std::pin::Pin;
-pub type CommandFn =
-    Box<dyn Fn(Message) -> Pin<Box<dyn Future<Output = Result<Message>> + Send>> + Send + Sync>;
+
+pub type Error = Box<dyn std::error::Error>;
+
+type CommandFn = Box<
+    dyn Fn(Message) -> Pin<Box<dyn Future<Output = std::result::Result<Message, Error>> + Send>>
+        + Send
+        + Sync,
+>;
 
 #[derive(Default)]
 pub(crate) struct CommandHander {
@@ -15,11 +24,13 @@ impl CommandHander {
         self.handers.insert(key.into(), handler);
     }
 
+    ///
+    /// 分发命令调用
     pub async fn call(&self, msg: IpcReqWithId) -> Result<IpcResponse> {
         let cmd = &msg.req.command;
         match self.handers.get(cmd) {
             Some(fun) => {
-                let payload = fun(msg.req.payload).await?;
+                let payload = fun(msg.req.payload).await.newerr()?;
                 Ok(IpcResponse::from(msg.req.id, payload))
             }
             None => Err(newerr!("not found cmd: {cmd}")),

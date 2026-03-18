@@ -18,7 +18,7 @@ async function loadItems(): Promise<NavItem[]> {
 onMounted(async () => (items.value = await loadItems()));
 
 async function call() {
-  const v = await window.bridge.send("call1", 1);
+  const v = await window.bridge.send("aaa", { name: "zs", age: 1 });
   console.log(v);
 }
 </script>

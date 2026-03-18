@@ -9,6 +9,8 @@ pub const BRIDGE_PUBLIC: &str = "bridge";
 /// 后端回调前端响应处理函数的方法名（挂载在内部桥接对象上）
 pub const BRIDGE_HANDLER_METHOD: &str = "_handleResponse";
 
+pub const ERROR_PARAM_NAME: &str = "error";
+
 /// 完整的后端调用表达式，用于 evaluate_script
 /// 格式：window.__bridge._handleResponse(response)
 pub fn bridge_handler_call(response_json: &str) -> String {
@@ -49,8 +51,8 @@ pub(crate) fn setup_script() -> String {
       if (cb) {{
         this._callbacks.delete(response.id);
         // 如果 payload 是对象且包含 error 字段，则 reject; 否则 resolve
-        if (response.payload && typeof response.payload === 'object' && response.payload.error) {{
-          cb.reject(new Error(response.payload.error));
+        if (response.payload && typeof response.payload === 'object' && response.payload.{error}) {{
+          cb.reject(new Error(response.payload.{error}));
         }} else {{
           cb.resolve(response.payload);
         }}
@@ -130,6 +132,7 @@ pub(crate) fn setup_script() -> String {
     "#,
         internal = BRIDGE_INTERNAL,
         public = BRIDGE_PUBLIC,
-        handler = BRIDGE_HANDLER_METHOD
+        handler = BRIDGE_HANDLER_METHOD,
+        error = ERROR_PARAM_NAME
     )
 }

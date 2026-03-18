@@ -1,21 +1,27 @@
-use std::pin::Pin;
-
-use libcommon::prelude::*;
-use window::WindowManager;
+use libcommon::logsetup;
+use serde_json::json;
+use window::{WindowManager, generate};
 
 #[tokio::main]
 #[logsetup]
-async fn main() -> Result<()> {
+async fn main() -> libcommon::prelude::Result<()> {
     let wm = WindowManager::default();
     wm.create_window("Start", "http://localhost:3000/app/")?;
-    wm.reigster([("call1".to_string(), call1)]);
+    wm.reigster(generate!(aaa, bbb));
     wm.run()
 }
 
-// todo
-pub fn call1(
-    msg: serde_json::Value,
-) -> Pin<Box<dyn Future<Output = Result<serde_json::Value>> + Send>> {
-    debug!("call1: {:?}", msg);
-    Box::pin(async { Ok(serde_json::json!(2)) })
+#[window::bridge]
+pub fn aaa(name: String, age: u32) -> serde_json::Value {
+    json!({
+        "name": name,
+        "age": age+1
+    })
+}
+
+#[window::bridge]
+pub fn bbb() -> serde_json::Value {
+    json!({
+        "result":true
+    })
 }

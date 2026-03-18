@@ -1,11 +1,12 @@
 [workspace]
 resolver = "3"
 members = [
-    "plugin",
-    "plugin-macro",
-    "plugin-manager",
-    "plugins/icons",
-    "value",
+    "plugin/plugin",
+    "plugin/plugin-macro",
+    "plugin/plugin-manager",
+    "plugin/plugins/icons",
+    "plugin/value",
     "app",
-    "window"
+    "window/window",
+    "window/window-macro",
 ]
