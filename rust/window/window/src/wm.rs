@@ -13,23 +13,37 @@ use tao::{
 };
 use wry::{WebView as WryWebview, WebViewBuilder};
 
-pub struct WindowManager {
+pub struct WindowManager<H> {
     event: EventLoop<UserEvent>,
     windows: DashMap<WindowId, Window>,
-    handlers: Arc<CommandHander>,
+    handlers: Arc<CommandHander<H>>,
+    state: WindowState<H>,
 }
 
-impl Default for WindowManager {
-    fn default() -> Self {
-        Self {
-            event: EventLoopBuilder::with_user_event().build(),
-            windows: Default::default(),
-            handlers: Default::default(),
-        }
+pub struct WindowState<H>(pub Arc<H>);
+
+impl<H> WindowState<H> {
+    pub fn get(&self) -> &H {
+        &self.0
     }
 }
 
-impl WindowManager {
+impl<H> Clone for WindowState<H> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<H: Send + Sync + 'static> WindowManager<H> {
+    pub fn with_state(state: Arc<H>) -> Self {
+        Self {
+            event: EventLoopBuilder::with_user_event().build(),
+            windows: DashMap::new(),
+            handlers: Arc::new(CommandHander::new()),
+            state: WindowState(state),
+        }
+    }
+
     pub fn create_window(&self, title: &str, url: &str) -> Result<WindowId> {
         let window = Window::create_default(title, url, &self.event)?;
         let id = window.id();
@@ -54,11 +68,12 @@ impl WindowManager {
     ///
     /// todo: 支持传入AppState
     ///
-    pub fn reigster<I, F>(&self, handlers: I)
+    pub fn register<I, F>(&self, handlers: I)
     where
         I: IntoIterator<Item = (String, F)>,
         F: Fn(
-                Message,
+                Option<Message>,
+                WindowState<H>,
             ) -> Pin<
                 Box<dyn Future<Output = std::result::Result<Message, Error>> + Send + 'static>,
             > + Send
@@ -72,7 +87,9 @@ impl WindowManager {
 
     pub fn run(self) -> ! {
         info!("start event loop");
+        let state = self.state.clone();
         let proxy = Arc::new(self.event.create_proxy());
+
         self.event.run(move |event, _, flow| {
             *flow = ControlFlow::Wait;
 
@@ -122,8 +139,9 @@ impl WindowManager {
                             let proxy = proxy.clone();
                             let windowid = msg.id;
                             let msgid = msg.req.id;
+                            let state = state.clone();
                             tokio::spawn(async move {
-                                let resp = match handlers.call(msg).await {
+                                let resp = match handlers.call(msg, state).await {
                                     Ok(resp) => resp,
                                     std::result::Result::Err(e) => IpcResponse::from(
                                         msgid,
@@ -177,10 +195,14 @@ impl Window {
             .with_ipc_handler(move |req| {
                 let str = req.body().to_string();
                 match IpcRequest::try_from(str.as_str()) {
-                    Ok(msg) => WindowManager::send_event(
-                        &proxy,
-                        UserEvent::IpcHandle(IpcReqWithId::new(id, msg)),
-                    ),
+                    Ok(msg) => {
+                        if proxy
+                            .send_event(UserEvent::IpcHandle(IpcReqWithId::new(id, msg)))
+                            .is_err()
+                        {
+                            warn!("failed to send event, the event loop has been destroyed");
+                        }
+                    }
                     std::result::Result::Err(e) => warn!("ipc message parse error: {str}: ${e:?}"),
                 }
             }))

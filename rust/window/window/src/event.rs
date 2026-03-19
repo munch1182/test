@@ -20,7 +20,8 @@ unsafe impl Send for UserEvent {}
 pub struct IpcRequest {
     pub id: u64, // 请求id, 由前端生成
     pub command: String,
-    pub payload: Message,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payload: Option<Message>,
 }
 
 impl TryFrom<&str> for IpcRequest {

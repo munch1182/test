@@ -1,29 +1,17 @@
-use libcommon::logsetup;
-use serde_json::json;
+use std::sync::Arc;
+
+use libcommon::{logsetup, prelude::*};
+use plugin_manager::manager::PluginManager;
 use window::{WindowManager, generate};
+mod bridge;
+
+pub use bridge::*;
 
 #[tokio::main]
 #[logsetup]
-async fn main() -> libcommon::prelude::Result<()> {
-    let wm = WindowManager::default();
+async fn main() -> Result<()> {
+    let wm = WindowManager::with_state(Arc::new(PluginManager::default()));
     wm.create_window("Start", "http://localhost:3000/app/")?;
-    wm.reigster(generate!(aaa, bbb, ccc));
+    wm.register(generate!(call, list_plugins));
     wm.run()
-}
-
-#[allow(unused)]
-#[window::bridge]
-pub fn aaa(name: String, age: u32) -> u32 {
-    age + 1
-}
-
-#[allow(unused)]
-#[window::bridge]
-pub fn ccc(name: String, age: u32) {}
-
-#[window::bridge]
-pub fn bbb() -> serde_json::Value {
-    json!({
-        "result":true
-    })
 }

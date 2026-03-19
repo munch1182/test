@@ -19,8 +19,8 @@ async function loadItems(): Promise<NavItem[]> {
 onMounted(async () => (items.value = await loadItems()));
 
 async function call() {
-  const result = await commands.aaa({ name: "zs", age:1 });
-  console.log(result);
+  const plugis = await commands.list_plugins();
+  console.log(plugis);
 }
 </script>
 

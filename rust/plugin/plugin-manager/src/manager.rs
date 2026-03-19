@@ -50,8 +50,11 @@ impl PluginManager {
         self.plugins.remove(id).map(|(_, (info, _))| info)
     }
 
-    pub fn list(&self) -> Vec<PluginInfo> {
-        self.plugins.iter().map(|v| v.0.clone()).collect()
+    pub fn list(&self) -> Vec<(PluginId, PluginInfo)> {
+        self.plugins
+            .iter()
+            .map(|v| (v.key().clone(), v.0.clone()))
+            .collect()
     }
 
     pub fn get(&self, id: &PluginId) -> Option<PluginInfo> {
@@ -65,9 +68,6 @@ impl PluginManager {
         }
     }
 }
-
-unsafe impl Send for PluginManager {}
-unsafe impl Sync for PluginManager {}
 
 impl TryFrom<&Path> for LoadPlugin {
     type Error = PluginManagerError;
