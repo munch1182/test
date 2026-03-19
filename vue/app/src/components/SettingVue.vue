@@ -9,7 +9,7 @@ const prop = defineProps({ version: String });
   >
     <span class="text-sm text-gray-500">{{ prop.version }}</span>
     <button
-      class="rounded-full bg-gray-100 transition hover:bg-gray-200"
+      class="rounded-full p-2 transition hover:bg-gray-200"
       title="设置"
     >
       <RiSettings2Fill class="text-sm text-gray-500" />

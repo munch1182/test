@@ -8,8 +8,11 @@ use syn::{
 
 // 定义包装函数后缀常量
 const WRAPPER_SUFFIX: &str = "_generate";
+const NO_INPUT_PARAM: &str = "WindowState";
 
-/// 属性宏：将函数转换为 IPC 可调用的包装函数
+/// 属性宏：将函数转换为 IPC 可调用的包装函数，并生成同名模块。
+///
+/// 原函数保持不变，生成的包装函数位于与原函数同名的模块内，可通过 `模块名::_原函数名_generate` 调用。
 ///
 /// 返回值可以为 `serde_json::Value`，也可以是 `std::result::Result<serde_json::Value, Box<dyn std::error::Error>>`;
 /// 如果返回值不是 `Result`, 要保证当前简写的 `Result` 能指向 `std::result::Result`;
@@ -34,33 +37,32 @@ const WRAPPER_SUFFIX: &str = "_generate";
 ///
 /// 生成的代码：
 /// ```rust
-/// #[derive(serde::Deserialize)]
-/// struct _AddArgs { a: i32, b: i32 }
+/// // 原函数
+/// pub fn add(a: i32, b: i32, state: WindowState<MyState>) -> std::result::Result<i32> { ... }
 ///
-/// pub fn _add_generate(
-///     _arg: Option<serde_json::Value>,
-///     state: WindowState<MyState>,
-/// ) -> Pin<Box<dyn Future<Output = std::result::Result<serde_json::Value, Box<dyn std::error::Error>>> + Send>> {
-///     Box::pin(async move {
-///         let _arg = _arg.ok_or_else(|| Box::<dyn std::error::Error>::from("need args but got none"))?;
-///         let args: _AddArgs = serde_json::from_value(_arg)?;
-///         let a = args.a;
-///         let b = args.b;
-///         let result = add(a, b, state).await?;
-///         Ok(serde_json::json!(result))
-///     })
+/// // 同名模块
+/// pub mod add {
+///     use super::*;
+///
+///     #[derive(serde::Deserialize)]
+///     struct _AddArgs { a: i32, b: i32 }
+///
+///     pub fn _add_generate(
+///         _arg: Option<serde_json::Value>,
+///         state: WindowState<MyState>,
+///     ) -> Pin<Box<dyn Future<Output = std::result::Result<serde_json::Value, Box<dyn std::error::Error>>> + Send>> {
+///         Box::pin(async move {
+///             let _arg = _arg.ok_or_else(|| Box::<dyn std::error::Error>::from("need args but got none"))?;
+///             let args: _AddArgs = serde_json::from_value(_arg)?;
+///             let a = args.a;
+///             let b = args.b;
+///             let result = super::add(a, b, state).await?;
+///             Ok(serde_json::json!(result))
+///         })
+///     }
 /// }
 ///
-/// pub fn _list_plugins_generate(
-///     _arg: Option<serde_json::Value>,
-///     state: WindowState<AppState>,
-/// ) -> Pin<Box<dyn Future<Output = std::result::Result<serde_json::Value, Box<dyn std::error::Error>>> + Send>> {
-///     Box::pin(async move {
-///         // 忽略 _arg，因为无参数
-///         let result = list_plugins(state).await?;
-///         Ok(serde_json::json!(result))
-///     })
-/// }
+/// // 无参数函数类似，但不生成结构体
 /// ```
 #[proc_macro_attribute]
 pub fn bridge(_args: TokenStream, input: TokenStream) -> TokenStream {
@@ -92,7 +94,7 @@ pub fn bridge(_args: TokenStream, input: TokenStream) -> TokenStream {
                 let is_host_candidate = idx == sig.inputs.len() - 1;
                 if is_host_candidate && let Type::Path(type_path) = &**ty {
                     let last_seg = type_path.path.segments.last().unwrap();
-                    if last_seg.ident == "WindowState" {
+                    if last_seg.ident == NO_INPUT_PARAM {
                         has_host = true;
                         host_ty = Some(ty.clone());
                         continue; // 不加入普通参数列表
@@ -156,17 +158,17 @@ pub fn bridge(_args: TokenStream, input: TokenStream) -> TokenStream {
             quote! { let #name = args.#name; }
         });
 
-        // 构造调用原函数的表达式，根据是否有宿主状态决定是否传入 state
+        // 构造调用原函数的表达式（通过 super:: 路径）
         let call_expr = if is_async {
             if has_host {
-                quote! { #fn_name(#(#arg_names,)* state).await }
+                quote! { super::#fn_name(#(#arg_names,)* state).await }
             } else {
-                quote! { #fn_name(#(#arg_names),*).await }
+                quote! { super::#fn_name(#(#arg_names),*).await }
             }
         } else if has_host {
-            quote! { #fn_name(#(#arg_names,)* state) }
+            quote! { super::#fn_name(#(#arg_names,)* state) }
         } else {
-            quote! { #fn_name(#(#arg_names),*) }
+            quote! { super::#fn_name(#(#arg_names),*) }
         };
 
         // 根据是否返回 Result 生成不同的转换代码
@@ -182,18 +184,18 @@ pub fn bridge(_args: TokenStream, input: TokenStream) -> TokenStream {
             }
         };
 
-        // 生成带参数结构体的完整代码
+        // 生成带参数结构体的完整代码（结构体设为私有）
         if has_host {
             let host_ty = host_ty.unwrap();
             quote! {
-                // 参数结构体
+                // 参数结构体（私有）
                 #[derive(serde::Deserialize)]
-                #vis struct #struct_name {
+                struct #struct_name {
                     #(#arg_struct_fields,)*
                 }
 
                 // 包装函数（使用具体宿主类型）
-                #vis fn #wrapper_name(
+                pub fn #wrapper_name(
                     _arg: Option<serde_json::Value>,
                     state: #host_ty,
                 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value, Box<dyn std::error::Error>>> + Send>> {
@@ -208,14 +210,14 @@ pub fn bridge(_args: TokenStream, input: TokenStream) -> TokenStream {
         } else {
             // 没有宿主状态，使用泛型 H 和 ::window::WindowState<H>
             quote! {
-                // 参数结构体
+                // 参数结构体（私有）
                 #[derive(serde::Deserialize)]
-                #vis struct #struct_name {
+                struct #struct_name {
                     #(#arg_struct_fields,)*
                 }
 
                 // 包装函数（泛型宿主状态，但忽略它）
-                #vis fn #wrapper_name<H>(
+                pub fn #wrapper_name<H>(
                     _arg: Option<serde_json::Value>,
                     _state: ::window::WindowState<H>,
                 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value, Box<dyn std::error::Error>>> + Send>> {
@@ -232,14 +234,14 @@ pub fn bridge(_args: TokenStream, input: TokenStream) -> TokenStream {
         // 无参数：直接调用函数，忽略 _arg
         let call_expr = if is_async {
             if has_host {
-                quote! { #fn_name(state).await }
+                quote! { super::#fn_name(state).await }
             } else {
-                quote! { #fn_name().await }
+                quote! { super::#fn_name().await }
             }
         } else if has_host {
-            quote! { #fn_name(state) }
+            quote! { super::#fn_name(state) }
         } else {
-            quote! { #fn_name() }
+            quote! { super::#fn_name() }
         };
 
         let convert_code = if is_result {
@@ -258,7 +260,7 @@ pub fn bridge(_args: TokenStream, input: TokenStream) -> TokenStream {
             let host_ty = host_ty.unwrap();
             quote! {
                 // 包装函数（使用具体宿主类型）
-                #vis fn #wrapper_name(
+                pub fn #wrapper_name(
                     _arg: Option<serde_json::Value>,
                     state: #host_ty,
                 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value, Box<dyn std::error::Error>>> + Send>> {
@@ -270,7 +272,7 @@ pub fn bridge(_args: TokenStream, input: TokenStream) -> TokenStream {
         } else {
             quote! {
                 // 包装函数（泛型宿主状态，但忽略它）
-                #vis fn #wrapper_name<H>(
+                pub fn #wrapper_name<H>(
                     _arg: Option<serde_json::Value>,
                     _state: ::window::WindowState<H>,
                 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value, Box<dyn std::error::Error>>> + Send>> {
@@ -282,11 +284,20 @@ pub fn bridge(_args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
+    // 将包装函数和结构体放入与原函数同名的模块中
+    let module_body = quote! {
+        use super::*;
+        #wrapper_body
+    };
+
     let expanded = quote! {
         // 保留原函数
         #(#attrs)* #vis #sig #block
 
-        #wrapper_body
+        // 生成同名模块，可见性与原函数一致
+        #vis mod #fn_name {
+            #module_body
+        }
     };
 
     TokenStream::from(expanded)

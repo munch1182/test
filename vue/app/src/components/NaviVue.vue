@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { NavItem } from "../types";
-const props = defineProps<{ items: NavItem[] }>();
+import type { Plugin } from "@bridge/bridge";
+const props = defineProps<{ items: Plugin[] }>();
 
-async function select(navi: NavItem) {
+async function select(navi: Plugin) {
   window.bridge.send("select", { id: navi.id });
 }
 </script>

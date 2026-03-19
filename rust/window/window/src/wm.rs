@@ -66,8 +66,6 @@ impl<H: Send + Sync + 'static> WindowManager<H> {
     /// 这个格式由[`crate::script`]注入, `command`参数即调用者使用宏注册的方法名;
     /// 调用该方法得到结果, 并通过[`resp2web`]回复给前端(附上前端发送的`id`参数), 这个回复方法也由[`crate::script`]注入;
     ///
-    /// todo: 支持传入AppState
-    ///
     pub fn register<I, F>(&self, handlers: I)
     where
         I: IntoIterator<Item = (String, F)>,

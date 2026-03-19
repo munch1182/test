@@ -5,7 +5,8 @@ use plugin_manager::manager::PluginManager;
 use window::{WindowManager, generate};
 mod bridge;
 
-pub use bridge::*;
+use crate::bridge::call;
+use crate::bridge::list_plugins;
 
 #[tokio::main]
 #[logsetup]

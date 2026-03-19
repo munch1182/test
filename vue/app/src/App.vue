@@ -1,27 +1,19 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import { NavItem } from "./types";
 import NaviVue from "./components/NaviVue.vue";
 import Setting from "./components/SettingVue.vue";
 import WindowHeaderVue from "./components/WindowHeaderVue.vue";
 import type WujieVue from "wujie-vue3";
 import LogoVue from "./components/LogoVue.vue";
 import { commands } from "./generate/bridge";
+import type { Plugin } from "@bridge/bridge";;
 
-const items = ref<NavItem[]>([]);
+const items = ref<Plugin[]>([]);
 const version = ref("0.1.0");
 const page = ref("");
 
-async function loadItems(): Promise<NavItem[]> {
-  return new Array(3).fill(new NavItem("Home1", 1));
-}
+onMounted(async () => (items.value = await commands.list_plugins()));
 
-onMounted(async () => (items.value = await loadItems()));
-
-async function call() {
-  const plugis = await commands.list_plugins();
-  console.log(plugis);
-}
 </script>
 
 <template>
@@ -44,7 +36,6 @@ async function call() {
         <WindowHeaderVue />
       </header>
       <article>
-        <button @click="call">123123</button>
         <WujieVue class="flex h-full w-full" v-if="page" :url="page" />
       </article>
     </main>

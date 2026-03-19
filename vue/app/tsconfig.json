@@ -1,13 +1,15 @@
 {
   "compilerOptions": {
-    "lib": ["DOM", "ES2020"],
+    "lib": [
+      "DOM",
+      "ES2020"
+    ],
     "jsx": "preserve",
     "target": "ES2020",
     "noEmit": true,
     "skipLibCheck": true,
     "jsxImportSource": "vue",
     "useDefineForClassFields": true,
-
     /* modules */
     "module": "ESNext",
     "moduleDetection": "force",
@@ -16,11 +18,17 @@
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "noUncheckedSideEffectImports": true,
-
     /* type checking */
     "strict": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+    "paths": {
+      "@bridge/*": [
+        "./src/generate/*"
+      ]
+    }
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

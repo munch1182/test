@@ -31,6 +31,18 @@ pub fn generate_ts(
         collector.visit_file(&ast);
     }
 
+    // 第一阶段：解析所有类型（结构体、枚举）
+    collector.resolve_all_types()?;
+
+    // 第二阶段：解析所有函数（此时所有类型已就绪）
+    // 取出函数 AST 的所有权，避免同时存在不可变和可变借用
+    let fns_ast = std::mem::take(&mut collector.fns_ast);
+    for func_ast in fns_ast {
+        if let Ok(info) = parse_fun(&func_ast, &mut collector) {
+            collector.funs.push(info);
+        }
+    }
+
     let funs = collector.funs;
     let mut output_str = String::new();
 
@@ -95,12 +107,21 @@ declare global {
     output_str.push_str("export const commands = {\n");
 
     for fun in funs {
+        // 输出文档注释（如果存在）
+        if let Some(docs) = &fun.docs {
+            output_str.push_str("\t/**\n");
+            for line in docs.lines() {
+                output_str.push_str(&format!("\t * {}\n", line));
+            }
+            output_str.push_str("\t */\n");
+        }
+
         let return_ts = fun.return_ty.to_ts_string();
         let fun_name = &fun.name;
 
         if fun.param.is_empty() {
             output_str.push_str(&format!(
-                "    {}: (): Promise<{}> => window.bridge.send<{}>('{}', undefined),\n",
+                "\t{}: (): Promise<{}> => window.bridge.send<{}>('{}', undefined),\n",
                 fun_name, return_ts, return_ts, fun_name
             ));
         } else {
@@ -111,7 +132,7 @@ declare global {
                 .collect();
             let arg_type = format!("{{ {} }}", fields.join(", "));
             output_str.push_str(&format!(
-                "    {}: (args: {}): Promise<{}> => window.bridge.send<{}>('{}', args),\n",
+                "\t{}: (args: {}): Promise<{}> => window.bridge.send<{}>('{}', args),\n",
                 fun_name, arg_type, return_ts, return_ts, fun_name
             ));
         }
@@ -171,25 +192,24 @@ struct FunInfo {
     name: String,
     param: Vec<(String, TsType)>,
     return_ty: TsType,
+    docs: Option<String>,
 }
 
 struct FunCollector<'a> {
     target: Vec<&'a str>,
-    funs: Vec<FunInfo>,
-    // 存储结构体定义（AST），用于后续解析字段
-    structs: HashMap<String, ItemStruct>,
-    // 存储枚举定义（AST）
-    enums: HashMap<String, ItemEnum>,
-    // 存储已经解析完成的结构体字段映射（类型名 -> 字段列表）
-    ty_map: HashMap<String, Vec<(String, TsType)>>,
-    // 存储已经解析完成的枚举映射
-    enum_ts_map: HashMap<String, EnumTsType>,
+    fns_ast: Vec<ItemFn>,                           // 存储待解析的函数 AST
+    funs: Vec<FunInfo>,                             // 存储解析后的函数信息
+    structs: HashMap<String, ItemStruct>,           // 存储结构体 AST
+    enums: HashMap<String, ItemEnum>,               // 存储枚举 AST
+    ty_map: HashMap<String, Vec<(String, TsType)>>, // 已解析的结构体字段
+    enum_ts_map: HashMap<String, EnumTsType>,       // 已解析的枚举
 }
 
 impl<'a> FunCollector<'a> {
     fn new(attrs: &[&'a str]) -> Self {
         Self {
             target: attrs.to_vec(),
+            fns_ast: Vec::new(),
             funs: Vec::new(),
             structs: HashMap::new(),
             enums: HashMap::new(),
@@ -256,7 +276,7 @@ impl<'a> FunCollector<'a> {
                             return Ok(TsType::Object(ident));
                         }
 
-                        // 尝试从 structs 中移除并解析（避免同时持有不可变引用和可变借用）
+                        // 尝试从 structs 中移除并解析
                         if let Some(item_struct) = self.structs.remove(&ident) {
                             self.parse_struct(&item_struct)?;
                             return Ok(TsType::Object(ident));
@@ -286,7 +306,7 @@ impl<'a> FunCollector<'a> {
         }
     }
 
-    /// 解析结构体，填充 ty_map（处理自引用：先插入空字段再解析）
+    /// 解析结构体，填充 ty_map
     fn parse_struct(&mut self, item: &ItemStruct) -> Result<()> {
         let name = item.ident.to_string();
         if self.ty_map.contains_key(&name) {
@@ -309,15 +329,14 @@ impl<'a> FunCollector<'a> {
             }
             syn::Fields::Unnamed(fields_unnamed) => {
                 for (i, field) in fields_unnamed.unnamed.iter().enumerate() {
-                    let field_name = format!("field{}", i); // 元组结构体字段命名为 field0, field1...
+                    let field_name = format!("field{}", i);
                     let field_ty = self.resolve_type(&field.ty)?;
                     fields.push((field_name, field_ty));
                 }
             }
-            syn::Fields::Unit => {} // 单元结构体没有字段
+            syn::Fields::Unit => {}
         }
 
-        // 更新为真正的字段列表
         self.ty_map.insert(name, fields);
         Ok(())
     }
@@ -329,7 +348,6 @@ impl<'a> FunCollector<'a> {
             return Ok(());
         }
 
-        // 判断是否所有变体都是单元变体
         let all_unit = item
             .variants
             .iter()
@@ -363,7 +381,7 @@ impl<'a> FunCollector<'a> {
                             fields.push((field_name, field_ty));
                         }
                     }
-                    syn::Fields::Unit => {} // 无字段
+                    syn::Fields::Unit => {}
                 }
                 variants_info.push((variant_name, fields));
             }
@@ -372,14 +390,35 @@ impl<'a> FunCollector<'a> {
             Ok(())
         }
     }
+
+    /// 解析所有收集到的类型（结构体、枚举）
+    fn resolve_all_types(&mut self) -> Result<()> {
+        // 先解析所有结构体
+        let struct_names: Vec<String> = self.structs.keys().cloned().collect();
+        for name in struct_names {
+            if !self.ty_map.contains_key(&name)
+                && let Some(item) = self.structs.remove(&name)
+            {
+                self.parse_struct(&item)?;
+            }
+        }
+        // 再解析所有枚举
+        let enum_names: Vec<String> = self.enums.keys().cloned().collect();
+        for name in enum_names {
+            if !self.enum_ts_map.contains_key(&name)
+                && let Some(item) = self.enums.remove(&name)
+            {
+                self.parse_enum(&item)?;
+            }
+        }
+        Ok(())
+    }
 }
 
 impl<'a, 'ast> Visit<'ast> for FunCollector<'a> {
     fn visit_item_fn(&mut self, node: &'ast syn::ItemFn) {
-        if self.has_target_attr(&node.attrs)
-            && let Ok(info) = parse_fun(node, self)
-        {
-            self.funs.push(info);
+        if self.has_target_attr(&node.attrs) {
+            self.fns_ast.push(node.clone()); // 仅保存 AST，暂不解析
         }
         visit_item_fn(self, node);
     }
@@ -397,11 +436,37 @@ impl<'a, 'ast> Visit<'ast> for FunCollector<'a> {
     }
 }
 
-// 解析函数，使用 collector 来解析类型
+// 提取文档注释
+fn extract_doc_comments(attrs: &[Attribute]) -> Option<String> {
+    let mut lines = Vec::new();
+    for attr in attrs {
+        if attr.path().is_ident("doc")
+            && let syn::Meta::NameValue(meta) = &attr.meta
+            && let syn::Expr::Lit(expr_lit) = &meta.value
+            && let syn::Lit::Str(lit_str) = &expr_lit.lit
+        {
+            let comment = lit_str.value();
+            for line in comment.lines() {
+                if line.trim() == "*" {
+                    continue;
+                }
+                lines.push(line.trim().to_string());
+            }
+        }
+    }
+    if lines.is_empty() {
+        None
+    } else {
+        Some(lines.join("\n"))
+    }
+}
+
+// 解析函数，使用 collector 来解析类型（此时类型应已就绪）
 fn parse_fun(func: &ItemFn, collector: &mut FunCollector) -> Result<FunInfo> {
     let name = func.sig.ident.to_string();
-    let mut param = Vec::new();
+    let docs = extract_doc_comments(&func.attrs);
 
+    let mut param = Vec::new();
     for input in &func.sig.inputs {
         if let FnArg::Typed(PatType { pat, ty, .. }) = input {
             let is_no_param = if let Type::Path(ty_path) = &**ty {
@@ -431,6 +496,7 @@ fn parse_fun(func: &ItemFn, collector: &mut FunCollector) -> Result<FunInfo> {
         name,
         param,
         return_ty,
+        docs,
     })
 }
 

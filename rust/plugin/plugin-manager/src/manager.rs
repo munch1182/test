@@ -53,7 +53,7 @@ impl PluginManager {
     pub fn list(&self) -> Vec<(PluginId, PluginInfo)> {
         self.plugins
             .iter()
-            .map(|v| (v.key().clone(), v.0.clone()))
+            .map(|v| (*v.key(), v.0.clone()))
             .collect()
     }
 

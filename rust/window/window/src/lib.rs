@@ -12,8 +12,10 @@ pub use paste::paste;
 pub use window_macro::bridge;
 pub use wm::*;
 
-pub type Handler<H> =
-    fn(Option<serde_json::Value>,WindowState<H>) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, Error>> + Send>>;
+pub type Handler<H> = fn(
+    Option<serde_json::Value>,
+    WindowState<H>,
+) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, Error>> + Send>>;
 
 /**
  * 将函数生成一个Handler
@@ -24,7 +26,7 @@ macro_rules! generate {
         [
             $(
                 $crate::paste! {
-                    (stringify!($fn).to_string(), [<_ $fn _generate>] as $crate::Handler<_>) //硬编码实现
+                    (stringify!($fn).to_string(), $fn::[<_ $fn _generate>] as $crate::Handler<_>)
                 },
             )*
         ]

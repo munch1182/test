@@ -15,6 +15,5 @@ fn main() {
         fs::create_dir_all(&output).expect("Failed to create output directory");
     }
     let output = output.join("bridge.ts");
-    println!("{output:?}");
     window_generate::generate_ts(&files, &attrs, output).expect("Failed to generate TS bindings");
 }
