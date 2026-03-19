@@ -9,8 +9,9 @@ use std::{pin::Pin, sync::Arc};
 use tao::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopProxy},
-    window::{Window as TaoWindow, WindowBuilder, WindowId},
+    window::{Window as TaoWindow, WindowBuilder},
 };
+use uuid::Uuid;
 use wry::{WebView as WryWebview, WebViewBuilder};
 
 pub struct WindowManager<H> {
@@ -19,6 +20,9 @@ pub struct WindowManager<H> {
     handlers: Arc<CommandHander<H>>,
     state: WindowState<H>,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct WindowId(pub Uuid);
 
 pub struct WindowState<H>(pub Arc<H>);
 
@@ -46,7 +50,7 @@ impl<H: Send + Sync + 'static> WindowManager<H> {
 
     pub fn create_window(&self, title: &str, url: &str) -> Result<WindowId> {
         let window = Window::create_default(title, url, &self.event)?;
-        let id = window.id();
+        let id = window.id;
         self.windows.insert(id, window);
         Ok(id)
     }
@@ -166,6 +170,7 @@ impl<H: Send + Sync + 'static> WindowManager<H> {
 }
 
 struct Window {
+    id: WindowId,
     window: TaoWindow,
     #[allow(unused)]
     webview: WryWebview,
@@ -187,7 +192,7 @@ impl Window {
     {
         let proxy = event.create_proxy();
         let window = win(WindowBuilder::new()).build(event)?;
-        let id = window.id();
+        let id = WindowId::default();
         let webview = web(WebViewBuilder::new()
             .with_initialization_script(setup_script())
             .with_ipc_handler(move |req| {
@@ -205,10 +210,30 @@ impl Window {
                 }
             }))
         .build(&window)?;
-        Ok(Self { window, webview })
+        Ok(Self {
+            id,
+            window,
+            webview,
+        })
     }
+}
 
-    fn id(&self) -> WindowId {
-        self.window.id()
+impl Default for WindowId {
+    fn default() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl TryFrom<String> for WindowId {
+    type Error = libcommon::prelude::Err;
+
+    fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
+        Ok(Self(Uuid::parse_str(&value)?))
+    }
+}
+
+impl std::fmt::Display for WindowId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }

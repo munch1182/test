@@ -1,6 +1,6 @@
+use crate::WindowId;
 use libcommon::newerr;
 use serde::{Deserialize, Serialize};
-use tao::window::WindowId;
 
 pub(crate) type Message = serde_json::Value;
 

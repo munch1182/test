@@ -1,18 +1,18 @@
 // This file is auto-generated. Do not edit manually.
 
 export interface Plugin {
-	id: string;
-	name: string;
-	version: string;
+    id: string;
+    name: string;
+    version: string;
 }
 
 
 declare global {
-	interface Window {
-		bridge: {
-			send<T>(command: string, payload: any | undefined): Promise<T>;
-		};
-	}
+  interface Window {
+    bridge: {
+      send<T>(command: string, payload: any | undefined): Promise<T>;
+    };
+  }
 }
 
 
