@@ -1,19 +1,14 @@
 // This file is auto-generated. Do not edit manually.
 
-export interface ScanResult {
-    loaded: string[];
-    failds: ScanFailItem[];
-}
-
 export interface ScanParam {
     path: string;
     load_exists: boolean;
 }
 
-export interface ScanFailItem {
-    url: string;
-    path: string;
-    reason: string;
+export interface ScanResult {
+    loaded: string[];
+    failds: ScanFailItem[];
+    ignores: string[];
 }
 
 export interface Plugin {
@@ -21,6 +16,12 @@ export interface Plugin {
     name: string;
     version: string;
     url: string;
+}
+
+export interface ScanFailItem {
+    url: string;
+    path: string;
+    reason: string;
 }
 
 
@@ -48,6 +49,6 @@ export const commands = {
 	 * 
 	 * * 扫描指定位置的插件
 	 */
-	scan_plugins: (args: { p: ScanParam }): Promise<any> => window.bridge.send<any>('scan_plugins', args),
+	scan_plugins: (args: { p: ScanParam }): Promise<ScanResult> => window.bridge.send<ScanResult>('scan_plugins', args),
 };
 

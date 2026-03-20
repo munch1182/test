@@ -30,6 +30,7 @@ pub struct ScanParam {
 pub struct ScanResult {
     pub loaded: Vec<String>,
     pub failds: Vec<ScanFailItem>,
+    pub ignores: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -39,14 +40,19 @@ pub struct ScanFailItem {
     pub reason: String,
 }
 
-impl From<(Vec<PluginId>, Vec<(String, String, String)>)> for ScanResult {
-    fn from(value: (Vec<PluginId>, Vec<(String, String, String)>)) -> Self {
+impl From<(Vec<PluginId>, Vec<(String, String, String)>, Vec<String>)> for ScanResult {
+    fn from(value: (Vec<PluginId>, Vec<(String, String, String)>, Vec<String>)) -> Self {
         let loaded = value.0.into_iter().map(|id| id.to_string()).collect();
         let failds = value
             .1
             .into_iter()
             .map(|(url, path, reason)| ScanFailItem { url, path, reason })
             .collect();
-        Self { loaded, failds }
+        let ignores = value.2;
+        Self {
+            loaded,
+            failds,
+            ignores,
+        }
     }
 }

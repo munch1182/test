@@ -12,9 +12,8 @@ pub fn scan_plugins(
     path: String,
     load_exist: bool,
     pm: Arc<PluginManager>,
-) -> Result<(Vec<PluginId>, Vec<(String, String, String)>)> {
+) -> Result<(Vec<PluginId>, Vec<(String, String, String)>, Vec<String>)> {
     let mut new_path = PathBuf::from(&path);
-    debug!("111:{}, {:?}", new_path.is_relative(), curr_dir!(&path));
     if new_path.is_relative()
         && let Ok(curr) = curr_dir!(&path)
     {
@@ -24,9 +23,11 @@ pub fn scan_plugins(
     debug!("start scan plugins from {new_path:?}");
     let mut ids = Vec::new();
     let mut fails = Vec::new();
+    let mut ignores = Vec::new();
     let plugins = scan_path(new_path)?;
     for UrlAndLib(url, lib) in plugins {
-        if !load_exist && pm.find((Some(url.clone()), Some(lib.clone()))).is_some() {
+        if !load_exist && let Some(id) = pm.find((Some(url.clone()), Some(lib.clone()))) {
+            ignores.push(id.to_string());
             debug!("plugin ({url},{lib}) already loaded before scan, ignore.");
             continue;
         }
@@ -42,11 +43,12 @@ pub fn scan_plugins(
         ids.push(plugin_id);
     }
     debug!(
-        "scan plugins done, {} loaded, {} failed",
+        "scan plugins done, {} loaded, {} failed, {} ignored",
         ids.len(),
-        fails.len()
+        fails.len(),
+        ignores.len()
     );
-    Ok((ids, fails))
+    Ok((ids, fails, ignores))
 }
 
 fn scan_path(dir: impl AsRef<Path>) -> Result<Vec<UrlAndLib>> {
