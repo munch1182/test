@@ -13,22 +13,31 @@ import EmptyState from "./components/EmptyState.vue";
 
 const items = ref<Plugin[]>([]);
 const version = ref("0.1.0");
-const page = ref("");
+const curr = ref<Plugin | undefined>();
 const state = createPageState();
 
-onMounted(
-  async () =>
-    (items.value = (await state.useAsync(() => commands.list_plugins())) ?? []),
-);
+onMounted(scan);
 
-async function showSetting() {
-  await select("setting");
+const scanParam = {
+  p: {
+    path: "../plugins/.dir",
+    load_exists: false,
+  },
+};
+
+async function scan() {
+  await state.useAsync(() => commands.scan_plugins(scanParam));
+  items.value = (await state.useAsync(() => commands.list_plugins())) ?? [];
+  if (curr.value === undefined && items.value.length > 0) {
+    curr.value = items.value[0];
+  }
 }
 
+async function showSetting() {}
+
 async function select(id: string) {
-  page.value = id;
-  let result = await state.useAsync(() => commands.call({ id }));
-  console.log(result);
+  console.log("select", id);
+  curr.value = items.value.find((item) => item.id === id);
 }
 </script>
 
@@ -41,7 +50,7 @@ async function select(id: string) {
         <LogoVue />
       </header>
       <nav class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
-        <NaviVue :items="items" @select="select" />
+        <NaviVue :items="items" @select="select" :active-id="curr?.id ?? ''" />
       </nav>
       <footer>
         <Setting :version="version" @setting="showSetting" />
@@ -56,8 +65,11 @@ async function select(id: string) {
         class="top-header pointer-events-none absolute right-0 left-0 z-10"
       />
       <article class="flex-1 overflow-x-hidden overflow-y-auto">
-        <EmptyState v-if="items.length === 0" class="p-32" />
-        <WujieVue class="flex h-full w-full" v-else :url="page" />
+        <EmptyState
+          v-if="items.length === 0 || (curr?.url?.length ?? 0) <= 0"
+          class="p-32"
+        />
+        <WujieVue class="flex h-full w-full" v-else :url="curr?.url ?? ''" />
       </article>
     </main>
   </div>

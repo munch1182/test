@@ -10,6 +10,7 @@ plugin-manager = { path = "../plugin/plugin-manager" }
 window = { path = "../window/window" }
 
 tokio = { version = "1", features = ["full"] }
+walkdir = "2"
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

@@ -5,11 +5,7 @@ use libcommon::{
 };
 use libloading::{Library, Symbol};
 use plugin::{Plugin, Value};
-use std::{
-    fs,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{fs, path::Path, sync::Arc};
 
 use crate::err::PluginManagerError;
 
@@ -26,7 +22,8 @@ pub struct PluginManager {
 pub struct PluginInfo {
     pub name: String,
     pub version: String,
-    pub path: PathBuf,
+    pub url: String,
+    pub lib: String,
 }
 
 struct LoadPlugin {
@@ -35,15 +32,38 @@ struct LoadPlugin {
 }
 
 impl PluginManager {
-    pub fn load(&self, path: impl AsRef<Path>) -> Result<PluginId> {
+    pub fn load(&self, path: impl AsRef<Path>, url: String) -> Result<PluginId> {
         let path = path.as_ref();
         debug!("loading plugin from path: {path:?}");
         let plugin = LoadPlugin::try_from(path)?;
-        let info = PluginInfo::try_from(path)?;
+        let info = PluginInfo::try_from((path, url))?;
         let id = PluginId::from(&info);
         info!("loaded plugin: {id}: {info:?}");
         self.plugins.insert(id, (info, plugin));
         Ok(id)
+    }
+
+    pub fn find(&self, find: (Option<String>, Option<String>)) -> Option<PluginId> {
+        if find.0.is_none() && find.1.is_none() {
+            return None;
+        }
+        let finder = self
+            .plugins
+            .iter()
+            .filter_map(|v| {
+                let info = &v.0;
+                if find.0.as_ref() == Some(&info.url) || find.1.as_ref() == Some(&info.lib) {
+                    Some(v.key().clone())
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        if finder.len() > 1 {
+            None
+        } else {
+            finder.get(0).cloned()
+        }
     }
 
     pub fn unload(&self, id: &PluginId) -> Option<PluginInfo> {
@@ -79,17 +99,18 @@ impl TryFrom<&Path> for LoadPlugin {
     }
 }
 
-impl TryFrom<&Path> for PluginInfo {
+impl TryFrom<(&Path, String)> for PluginInfo {
     type Error = PluginManagerError;
 
-    fn try_from(value: &Path) -> Result<Self, Self::Error> {
-        if fs::exists(value).is_err() || !value.is_file() {
-            return Err(PluginManagerError::FileNotExists(value.to_path_buf()));
+    fn try_from(value: (&Path, String)) -> Result<Self, Self::Error> {
+        let (path, url) = value;
+        if fs::exists(path).is_err() || !path.is_file() {
+            return Err(PluginManagerError::FileNotExists(path.to_path_buf()));
         }
 
-        let name = value
+        let name = path
             .file_name()
-            .ok_or(PluginManagerError::FileNotExists(value.to_path_buf()))?
+            .ok_or(PluginManagerError::FileNotExists(path.to_path_buf()))?
             .to_string_lossy()
             .to_string();
         let (name, version, _) = regex::Regex::new(PATTERN)?
@@ -102,10 +123,12 @@ impl TryFrom<&Path> for PluginInfo {
                 )
             })
             .ok_or(regex::Error::Syntax(String::from("not match")))?;
+        let path = path.to_string_lossy().to_string();
         Ok(Self {
             name,
             version,
-            path: value.to_path_buf(),
+            lib: path,
+            url,
         })
     }
 }

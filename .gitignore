@@ -21,3 +21,5 @@ venv/
 .env
 
 test**
+
+plugins/.dir

@@ -1,9 +1,26 @@
 // This file is auto-generated. Do not edit manually.
 
+export interface ScanResult {
+    loaded: string[];
+    failds: ScanFailItem[];
+}
+
+export interface ScanParam {
+    path: string;
+    load_exists: boolean;
+}
+
+export interface ScanFailItem {
+    url: string;
+    path: string;
+    reason: string;
+}
+
 export interface Plugin {
     id: string;
     name: string;
     version: string;
+    url: string;
 }
 
 
@@ -27,5 +44,10 @@ export const commands = {
 	 * * 调用插件
 	 */
 	call: (args: { id: string }): Promise<string> => window.bridge.send<string>('call', args),
+	/**
+	 * 
+	 * * 扫描指定位置的插件
+	 */
+	scan_plugins: (args: { p: ScanParam }): Promise<any> => window.bridge.send<any>('scan_plugins', args),
 };
 

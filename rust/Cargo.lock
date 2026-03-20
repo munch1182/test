@@ -37,6 +37,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "walkdir",
  "window",
  "window-generate",
 ]
