@@ -193,6 +193,7 @@ impl Window {
         let proxy = event.create_proxy();
         let window = win(WindowBuilder::new()).build(event)?;
         let id = WindowId::default();
+        debug!("create window: {id}");
         let webview = web(WebViewBuilder::new()
             .with_initialization_script(setup_script())
             .with_ipc_handler(move |req| {

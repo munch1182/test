@@ -1,8 +1,6 @@
-use value::Value;
+use crate::prelude::*;
 
-pub type PluginResult<T> = Result<T, Box<dyn std::error::Error>>;
-
-#[async_trait::async_trait]
+#[async_trait]
 pub trait Plugin: Send + Sync {
-    async fn call(&self, input: &Value) -> PluginResult<Value>;
+    async fn call(&self, input: Value) -> Result<Value, Box<dyn std::error::Error + Send + Sync>>;
 }

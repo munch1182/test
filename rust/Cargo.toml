@@ -4,7 +4,6 @@ members = [
     "plugin/plugin",
     "plugin/plugin-macro",
     "plugin/plugin-manager",
-    "plugin/plugins/icons",
     "plugin/value",
     "app",
     "window/window",

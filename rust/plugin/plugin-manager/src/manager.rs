@@ -1,10 +1,10 @@
 use dashmap::DashMap;
 use libcommon::{
-    hash,
-    prelude::{debug, info},
+    hash, newerr,
+    prelude::{Result, debug, info},
 };
 use libloading::{Library, Symbol};
-use plugin::{Plugin, PluginResult, Value};
+use plugin::{Plugin, Value};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -35,7 +35,7 @@ struct LoadPlugin {
 }
 
 impl PluginManager {
-    pub fn load(&self, path: impl AsRef<Path>) -> PluginResult<PluginId> {
+    pub fn load(&self, path: impl AsRef<Path>) -> Result<PluginId> {
         let path = path.as_ref();
         debug!("loading plugin from path: {path:?}");
         let plugin = LoadPlugin::try_from(path)?;
@@ -61,9 +61,9 @@ impl PluginManager {
         self.plugins.get(id).map(|v| v.0.clone())
     }
 
-    pub async fn call(&self, id: &PluginId, input: &Value) -> PluginResult<Value> {
+    pub async fn call(&self, id: &PluginId, input: Value) -> Result<Value> {
         match self.plugins.get(id) {
-            Some(value) => value.1.plugin.call(input).await,
+            Some(value) => value.1.plugin.call(input).await.map_err(|e| newerr!(e)),
             None => Err(PluginManagerError::PluginNotFound(*id).into()),
         }
     }

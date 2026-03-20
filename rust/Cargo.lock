@@ -1019,17 +1019,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "icons"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "libcommon",
- "plugin",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "icu_collections"
 version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1658,7 +1647,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "plugin-macro",
- "value",
+ "serde_json",
 ]
 
 [[package]]

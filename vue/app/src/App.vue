@@ -16,7 +16,10 @@ const version = ref("0.1.0");
 const page = ref("");
 const state = createPageState();
 
-onMounted(async () => (items.value = await commands.list_plugins()));
+onMounted(
+  async () =>
+    (items.value = (await state.useAsync(() => commands.list_plugins())) ?? []),
+);
 
 async function showSetting() {
   await select("setting");
